@@ -15,11 +15,13 @@
     "primeflex": "^4.0.0",
     "primeicons": "^7.0.0",
     "primevue": "^4.4.1",
+    "televue": "^1.0.0-alpha.1",
     "vue": "^3.5.22",
     "vue-router": "^4.6.3"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.1",
+    "cypress": "^14.5.4",
     "vite": "^7.1.7"
   }
 }

@@ -1,6 +1,11 @@
 <script setup>
 import { Menubar, PanelMenu } from 'primevue';
-import router from '../../router'
+import router from '../router'
+import { ButtonLogin } from 'televue'
+
+import { ref, computed } from 'vue';
+const sidebarVisible = ref(true);
+const isMobile = computed(() => window.innerWidth <= 767);
 </script>
 
 <template>
@@ -32,7 +37,14 @@ import router from '../../router'
                 }
         ]">
             <template #start>
-                <span class="layout-logo text-xl font-bold ml-2">AgroFlow</span>
+                <span class="layout-logo text-xl font-bold ml-2 mr-2">AgroFlow!</span>
+            </template>
+            <template #end>
+                <ButtonLogin
+                    mode="popup"
+                    size="large"
+                    bot-username="agroflow12_bot"
+                />
             </template>
         </Menubar>
         <div class="layout-content flex flex-1">
