@@ -1,8 +1,6 @@
-using Elsa.EntityFrameworkCore;
-using Elsa.EntityFrameworkCore.Extensions;
-using Elsa.EntityFrameworkCore.Modules.Management;
-using Elsa.EntityFrameworkCore.Modules.Runtime;
-using Elsa.Extensions;
+
+using Infrastructure.Data;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +14,16 @@ builder.Host.UseSerilog((ctx, lc) =>
 // ----- Configuration -----
 var connectionString = builder.Configuration.GetConnectionString("AgroFlowConnection");
 
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(o =>
+    {
+        o.Cookie.Name = "docflow_auth";
+        o.Cookie.HttpOnly = true;
+        o.SlidingExpiration = true;
+        o.ExpireTimeSpan = TimeSpan.FromDays(7);
+    });
+builder.Services.AddAuthorization();
+builder.Services.AddControllers();
 // ----- Services -----
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -24,22 +32,15 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<DocflowDbContext>(opt =>
     opt.UseSqlServer(connectionString));
 
-// Elsa (workflow engine)
-builder.Services.AddElsa(elsa =>
-{
-    elsa.UseWorkflowManagement(management =>
-        management.UseEntityFrameworkCore(ef => ef.UseSqlServer(connectionString)));
-
-    elsa.UseWorkflowRuntime(runtime =>
-        runtime.UseEntityFrameworkCore(ef => ef.UseSqlServer(connectionString)));
-});
-
-// HealthChecks
-builder.Services.AddHealthChecks()
-    .AddSqlServer(connectionString);
 
 // ----- App -----
 var app = builder.Build();
+
+app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllers();
 
 if (app.Environment.IsDevelopment())
 {
@@ -47,14 +48,13 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.MapHealthChecks("/health");
+// сидирование
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<DocflowDbContext>();
+    await DbInitializer.SeedAsync(db);
+}
 
 app.MapGet("/", () => Results.Ok("Docflow backend is running"));
 
 app.Run();
-
-// ----- Placeholder для контекста -----
-public class DocflowDbContext : DbContext
-{
-    public DocflowDbContext(DbContextOptions<DocflowDbContext> options) : base(options) { }
-}
