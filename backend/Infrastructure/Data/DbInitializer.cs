@@ -19,13 +19,13 @@ public static class DbInitializer
         }
 
         // пользователь-админ
-        var admin = await db.Users.FirstOrDefaultAsync(u => u.Username == "AdmistratorDF");
+        var admin = await db.Users.FirstOrDefaultAsync(u => u.Username == "AdministratorDF");
         if (admin is null)
         {
             admin = new User
             {
                 Id = Guid.NewGuid(),
-                Username = "AdmistratorDF",
+                Username = "AdministratorDF",
                 PasswordHash = PasswordHasher.Hash("password"),
                 DisplayName = "System Administrator",
                 Email = "saikoniusss@gmail.com",

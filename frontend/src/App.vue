@@ -1,10 +1,5 @@
-<script setup>
-import Layout from './layouts/Layout.vue';
-
-</script>
-
 <template>
-    <Layout/>
+  <router-view />
 </template>
 
 <style>

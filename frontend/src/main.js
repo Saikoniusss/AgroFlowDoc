@@ -1,7 +1,7 @@
 import { createApp } from 'vue'
 import './style.css'
 import App from './App.vue'
-import router from './router'
+import router from './routers/index'
 import { createPinia } from 'pinia'
 
 import PrimeVue from 'primevue/config'

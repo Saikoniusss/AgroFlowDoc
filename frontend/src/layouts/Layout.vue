@@ -1,12 +1,42 @@
 <script setup>
-import { Menubar, PanelMenu } from 'primevue';
-import router from '../router'
-import { ButtonLogin } from 'televue'
-
+import { Menubar, PanelMenu, Button, Menu } from 'primevue';
+import router from '../router';
+import routerPage from '../routers/index';
+import { useAuthStore } from '@/store/auth';
 import { ref, computed } from 'vue';
+
+const auth = useAuthStore();
 const sidebarVisible = ref(true);
 const isMobile = computed(() => window.innerWidth <= 767);
+
+// 👇 управление меню профиля
+const menu = ref();
+const menuItems = ref([
+  {
+    label: 'Редактировать профиль',
+    icon: 'pi pi-user-edit',
+    command: () => routerPage.push('/profile'),
+  },
+  {
+    separator: true,
+  },
+  {
+    label: 'Выйти',
+    icon: 'pi pi-sign-out',
+    command: async () => {
+      await auth.logout();
+      routerPage.push('/login');
+    },
+  },
+]);
+const toggleMenu = (event) => {
+  if (menu.value && typeof menu.value.toggle === 'function') {
+    menu.value.toggle(event);
+  }
+};
+
 </script>
+
 
 <template>
     <div class="layout-container flex flex-column h-screen">
@@ -40,11 +70,15 @@ const isMobile = computed(() => window.innerWidth <= 767);
                 <span class="layout-logo text-xl font-bold ml-2 mr-2">AgroFlow!</span>
             </template>
             <template #end>
-                <ButtonLogin
-                    mode="popup"
-                    size="large"
-                    bot-username="agroflow12_bot"
+            <div class="flex align-items-center gap-2">
+                <Button
+                    icon="pi pi-user"
+                    :label="auth.user?.displayName || auth.user?.username || 'Профиль'"
+                    class="p-button-text p-button-plain"
+                    @click="toggleMenu"
                 />
+                <Menu ref="menu" :model="menuItems" :popup="true" />
+            </div>
             </template>
         </Menubar>
         <div class="layout-content flex flex-1">

@@ -14,6 +14,20 @@ builder.Host.UseSerilog((ctx, lc) =>
 // ----- Configuration -----
 var connectionString = builder.Configuration.GetConnectionString("AgroFlowConnection");
 
+// CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+        policy.WithOrigins(
+            "http://localhost:5173",  // если фронт на 5173
+            "http://localhost:5174"   // если на 5174
+        )
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials());
+});
+
+builder.Services.AddControllers();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(o =>
     {
@@ -23,7 +37,6 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         o.ExpireTimeSpan = TimeSpan.FromDays(7);
     });
 builder.Services.AddAuthorization();
-builder.Services.AddControllers();
 // ----- Services -----
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -35,18 +48,20 @@ builder.Services.AddDbContext<DocflowDbContext>(opt =>
 
 // ----- App -----
 var app = builder.Build();
-
-app.UseRouting();
-app.UseAuthentication();
-app.UseAuthorization();
-
-app.MapControllers();
-
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+app.UseStaticFiles();
+app.UseRouting();
+app.UseCors("AllowFrontend");
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllers();
+
+
 
 // сидирование
 using (var scope = app.Services.CreateScope())

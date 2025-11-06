@@ -31,7 +31,7 @@ public class UsersController : ControllerBase
         if (user is null) return NotFound();
         user.IsApproved = true;
         await _db.SaveChangesAsync();
-        return Ok();
+        return Ok(new { message = $"Пользователь {user.DisplayName} подтверждён." });
     }
 
     [HttpPost("{id:guid}/roles")]
