@@ -81,7 +81,7 @@ console.log('Auth user in Layout:', auth.user);
                         class="cursor-pointer border-2 border-blue-500"
                         @click="toggleMenu"
                     />
-                    <span class="font-bold m-auto">{{ auth.user?.username || 'Профиль' }}</span>
+                    <span class="font-bold m-auto">{{ auth.user?.displayName || 'Профиль' }}</span>
                 </div>
                 <Menu ref="menu" :model="menuItems" :popup="true" />
             </template>

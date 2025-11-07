@@ -1,4 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
+import AdminUsers from '@/views/AdminPage/AdminUsers.vue';
+import AdminRoles from '@/views/AdminPage/AdminRoles.vue';
+import { useAuthStore } from '@/store/auth';
 
 const router = createRouter({
     history: createWebHistory(),
@@ -16,13 +19,18 @@ const router = createRouter({
             component: () => import('../views/Users/RegisterView.vue')
         },
         { 
-            path: '/admin/users',
-            component: () => import('../views/AdminPage/AdminUserConfirm.vue'),
-            meta: {requiresAdmin: true} 
-        },
-        { 
             path: '/profile',
             component: () => import('../views/Users/UserProfile.vue')
+        },
+        {
+        path: '/admin/users',
+        component: AdminUsers,
+        meta: { requiresAuth: true, requiresAdmin: true },
+        },
+        {
+        path: '/admin/roles',
+        component: AdminRoles,
+        meta: { requiresAuth: true, requiresAdmin: true },
         },
         {
             component: () => import('../layouts/Layout.vue'),
@@ -75,6 +83,22 @@ const router = createRouter({
             ]
         },
     ]
+});
+
+router.beforeEach((to, from, next) => {
+  const auth = useAuthStore();
+
+  if (to.meta.requiresAuth && !auth.token) {
+    next('/login');
+    return;
+  }
+
+  if (to.meta.requiresAdmin && !auth.user?.roles?.includes('Administrator')) {
+    next('/documents');
+    return;
+  }
+
+  next();
 });
 
 export default router;

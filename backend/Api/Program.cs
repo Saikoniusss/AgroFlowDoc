@@ -6,7 +6,7 @@ using Serilog;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-
+using Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,7 +21,12 @@ builder.Host.UseSerilog((ctx, lc) =>
 
 // ----- Configuration -----
 var connectionString = builder.Configuration.GetConnectionString("AgroFlowConnection");
-
+var isEfTool = AppDomain.CurrentDomain.FriendlyName.Contains("ef");
+if (!isEfTool)
+{
+    // Регистрируем TelegramBotService только при нормальном запуске
+    builder.Services.AddHostedService<TelegramBotService>();
+}
 // CORS
 builder.Services.AddCors(options =>
 {
@@ -60,7 +65,6 @@ builder.Services.AddAuthorization();
 // ----- Services -----
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
 // EF Core (наша БД)
 builder.Services.AddDbContext<DocflowDbContext>(opt =>
     opt.UseSqlServer(connectionString));
