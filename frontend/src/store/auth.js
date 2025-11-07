@@ -3,7 +3,7 @@ import http from '@/api/http';
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    user: null,
+    user: JSON.parse(localStorage.getItem('user')) || null,
     token: localStorage.getItem('token') || null,
     error: null,
   }),
@@ -14,6 +14,7 @@ export const useAuthStore = defineStore('auth', {
         this.token = res.data.access_token;
         this.user = res.data.user;
         localStorage.setItem('token', this.token);
+        localStorage.setItem('user', JSON.stringify(this.user));
         http.defaults.headers.common['Authorization'] = `Bearer ${this.token}`;
       } catch (err) {
         this.error = err.response?.data?.message || 'Ошибка входа';

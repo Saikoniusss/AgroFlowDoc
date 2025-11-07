@@ -1,10 +1,11 @@
 <script setup>
-import { Menubar, PanelMenu, Button, Menu } from 'primevue';
-import router from '../router';
+import { Menubar, PanelMenu, Button, Menu, Avatar } from 'primevue';
 import routerPage from '../routers/index';
 import { useAuthStore } from '@/store/auth';
 import { ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
 
+const router = useRouter();
 const auth = useAuthStore();
 const sidebarVisible = ref(true);
 const isMobile = computed(() => window.innerWidth <= 767);
@@ -12,28 +13,30 @@ const isMobile = computed(() => window.innerWidth <= 767);
 // 👇 управление меню профиля
 const menu = ref();
 const menuItems = ref([
-  {
-    label: 'Редактировать профиль',
-    icon: 'pi pi-user-edit',
-    command: () => routerPage.push('/profile'),
-  },
-  {
-    separator: true,
-  },
-  {
-    label: 'Выйти',
-    icon: 'pi pi-sign-out',
-    command: async () => {
-      await auth.logout();
-      routerPage.push('/login');
+    {
+        label: 'Редактировать профиль',
+        icon: 'pi pi-user-edit',
+        command: () => routerPage.push('/profile'),
     },
-  },
+    {
+        separator: true,
+    },
+    {
+        label: 'Выйти',
+        icon: 'pi pi-sign-out',
+        command: async () => {
+            await auth.logout();
+            routerPage.push('/login');
+        },
+    },
 ]);
 const toggleMenu = (event) => {
-  if (menu.value && typeof menu.value.toggle === 'function') {
-    menu.value.toggle(event);
-  }
+    if (menu.value && typeof menu.value.toggle === 'function') {
+        menu.value.toggle(event);
+    }
 };
+
+console.log('Auth user in Layout:', auth.user);
 
 </script>
 
@@ -70,15 +73,17 @@ const toggleMenu = (event) => {
                 <span class="layout-logo text-xl font-bold ml-2 mr-2">AgroFlow!</span>
             </template>
             <template #end>
-            <div class="flex align-items-center gap-2">
-                <Button
-                    icon="pi pi-user"
-                    :label="auth.user?.displayName || auth.user?.username || 'Профиль'"
-                    class="p-button-text p-button-plain"
-                    @click="toggleMenu"
-                />
+                <div class="flex items-center gap-2">
+                    <Avatar 
+                        image="https://primefaces.org/cdn/primevue/images/avatar/amyelsner.png" 
+                        shape="circle"
+                        size="large"
+                        class="cursor-pointer border-2 border-blue-500"
+                        @click="toggleMenu"
+                    />
+                    <span class="font-bold m-auto">{{ auth.user?.username || 'Профиль' }}</span>
+                </div>
                 <Menu ref="menu" :model="menuItems" :popup="true" />
-            </div>
             </template>
         </Menubar>
         <div class="layout-content flex flex-1">
@@ -91,37 +96,37 @@ const toggleMenu = (event) => {
                     },
                     {
                         label: 'Счет на оплату',
-                        icon: 'pi pi-fw pi-info-circle',
+                        icon: 'pi pi-fw pi-cog',
                         command: () => router.push('/invoice')
                     },
                     {
                         label: 'Заявка на оприходование на склад',
-                        icon: 'pi pi-fw pi-info-circle',
+                        icon: 'pi pi-fw pi-id-card',
                         command: () => router.push('/receipt-request')
                     },
                     {
                         label: 'Завка на отпуск со склада',
-                        icon: 'pi pi-fw pi-info-circle',
+                        icon: 'pi pi-fw pi-inbox',
                         command: () => router.push('/issue-request')
                     },
                     {
                         label: 'Счет на оплату расходы на экспорт',
-                        icon: 'pi pi-fw pi-info-circle',
+                        icon: 'pi pi-fw pi-tag',
                         command: () => router.push('/export-expense-invoice')
                     },
                     {
                         label: 'Картотека отгрузок на экспорт',
-                        icon: 'pi pi-fw pi-info-circle',
+                        icon: 'pi pi-fw pi-truck',
                         command: () => router.push('/export-shipments-archive')
                     },
                     {
                         label: 'Склад',
-                        icon: 'pi pi-fw pi-info-circle',
+                        icon: 'pi pi-fw pi-warehouse',
                         command: () => router.push('/warehouse')
                     },
                     {
                         label: 'Прием зерна',
-                        icon: 'pi pi-fw pi-info-circle',
+                        icon: 'pi pi-fw pi-upload',
                         command: () => router.push('/grain-reception')
                     }
                 ]" class="flex-1 overflow-auto" />

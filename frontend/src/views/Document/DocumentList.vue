@@ -1,9 +1,8 @@
 <template>
-    <Layout/>
+    
 </template>
 
 <script setup>
-import Layout from '@/layouts/Layout.vue';
 import { useAuthStore } from '@/store/auth';
 import { useRouter } from 'vue-router';
 
