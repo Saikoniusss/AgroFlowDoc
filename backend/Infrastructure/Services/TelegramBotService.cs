@@ -6,6 +6,7 @@ using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Telegram.Bot.Types.Enums;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Infrastructure.Services;
 
@@ -13,14 +14,14 @@ public class TelegramBotService : BackgroundService
 {
     private readonly ILogger<TelegramBotService> _logger;
     private readonly IConfiguration _config;
-    private readonly DocflowDbContext _db;
+    private readonly IServiceScopeFactory _scopeFactory;
     private TelegramBotClient? _bot;
 
-    public TelegramBotService(ILogger<TelegramBotService> logger, IConfiguration config, DocflowDbContext db)
+    public TelegramBotService(ILogger<TelegramBotService> logger, IConfiguration config, IServiceScopeFactory scopeFactory)
     {
         _logger = logger;
         _config = config;
-        _db = db;
+        _scopeFactory = scopeFactory;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -38,7 +39,7 @@ public class TelegramBotService : BackgroundService
 
         var options = new Telegram.Bot.Polling.ReceiverOptions
         {
-            AllowedUpdates = Array.Empty<UpdateType>()
+            AllowedUpdates = Array.Empty<UpdateType>() // Получаем все апдейты
         };
         _bot.StartReceiving(HandleUpdateAsync, HandleErrorAsync, options, stoppingToken);
     }
@@ -62,7 +63,11 @@ public class TelegramBotService : BackgroundService
                 return;
             }
 
-            var user = await _db.Users.FirstOrDefaultAsync(u => u.TelegramUsername == username, ct);
+            // Создаём scope для DbContext
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<DocflowDbContext>();
+
+            var user = await db.Users.FirstOrDefaultAsync(u => u.TelegramUsername == username, ct);
             if (user is null)
             {
                 await bot.SendTextMessageAsync(chatId,
@@ -72,7 +77,7 @@ public class TelegramBotService : BackgroundService
             }
 
             user.TelegramChatId = chatId;
-            await _db.SaveChangesAsync(ct);
+            await db.SaveChangesAsync(ct);
 
             await bot.SendTextMessageAsync(chatId,
                 $"✅ Привет, {user.DisplayName}! Твой Telegram успешно привязан к AgroFlow.",
@@ -93,7 +98,10 @@ public class TelegramBotService : BackgroundService
         if (_bot is null)
             return;
 
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DocflowDbContext>();
+
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId);
         if (user?.TelegramChatId is null)
             return;
 

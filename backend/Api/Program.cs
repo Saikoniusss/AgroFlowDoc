@@ -22,11 +22,6 @@ builder.Host.UseSerilog((ctx, lc) =>
 // ----- Configuration -----
 var connectionString = builder.Configuration.GetConnectionString("AgroFlowConnection");
 var isEfTool = AppDomain.CurrentDomain.FriendlyName.Contains("ef");
-if (!isEfTool)
-{
-    // Регистрируем TelegramBotService только при нормальном запуске
-    builder.Services.AddHostedService<TelegramBotService>();
-}
 // CORS
 builder.Services.AddCors(options =>
 {
@@ -69,7 +64,11 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<DocflowDbContext>(opt =>
     opt.UseSqlServer(connectionString));
 
-
+// Регистрируем TelegramBotService как HostedService (singleton)
+if (!isEfTool)
+{
+    builder.Services.AddHostedService<TelegramBotService>();
+}
 // ----- App -----
 var app = builder.Build();
 if (app.Environment.IsDevelopment())

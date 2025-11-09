@@ -20,6 +20,27 @@ export const useAuthStore = defineStore('auth', {
         this.error = err.response?.data?.message || 'Ошибка входа';
       }
     },
+    async register(data) {
+      this.loading = true;
+      this.error = null;
+      try {
+        const res = await http.post('/auth/register', data);
+        return res.data;
+      } catch (err) {
+        this.error = err.response?.data?.message || 'Ошибка регистрации';
+        throw err;
+      } finally {
+        this.loading = false;
+      }
+    },
+    async fetchUser() {
+      try {
+        const res = await http.get('/auth/me');
+        this.user = res.data;
+      } catch {
+        this.user = null;
+      }
+    },
     logout() {
       this.token = null;
       this.user = null;
