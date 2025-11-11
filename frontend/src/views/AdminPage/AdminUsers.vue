@@ -1,75 +1,31 @@
-<template>
-  <div class="admin-page">
-    <h2>Пользователи</h2>
-
-    <table class="user-table">
-      <thead>
-        <tr>
-          <th>Имя</th>
-          <th>Логин</th>
-          <th>Email</th>
-          <th>Подтверждён</th>
-          <th>Активен</th>
-          <th>Роли</th>
-          <th>Действия</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="u in users" :key="u.id">
-          <td>{{ u.displayName }}</td>
-          <td>{{ u.username }}</td>
-          <td>{{ u.email }}</td>
-          <td>
-            <span :class="['status', u.isApproved ? 'ok' : 'pending']">
-              {{ u.isApproved ? 'Да' : 'Нет' }}
-            </span>
-          </td>
-          <td>
-            <span :class="['status', u.isActive ? 'ok' : 'inactive']">
-              {{ u.isActive ? 'Да' : 'Нет' }}
-            </span>
-          </td>
-          <td>
-            <span v-for="r in u.roles" :key="r" class="role-chip">{{ r }}</span>
-          </td>
-          <td>
-            <button v-if="!u.isApproved" @click="approveUser(u.id)">✅ Подтвердить</button>
-            <button v-if="u.isActive" @click="deactivateUser(u.id)">🚫 Отключить</button>
-            <button @click="openRoleDialog(u)">🎯 Назначить роль</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div v-if="showDialog" class="dialog">
-      <div class="dialog-content">
-        <h3>Назначить роль пользователю {{ selectedUser?.displayName }}</h3>
-        <select v-model="selectedRole">
-          <option v-for="r in roles" :key="r.id" :value="r.name">{{ r.name }}</option>
-        </select>
-        <div class="dialog-actions">
-          <button @click="assignRole">Сохранить</button>
-          <button @click="closeDialog">Отмена</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup>
 import { ref, onMounted } from 'vue';
+import DataTable from 'primevue/datatable';
+import Column from 'primevue/column';
+import InputText from 'primevue/inputtext';
+import IconField from 'primevue/iconfield';
+import InputIcon from 'primevue/inputicon';
+import { FilterMatchMode } from '@primevue/core/api';
+import Avatar from 'primevue/avatar';
+import Button from 'primevue/button';
 import http from '@/api/http';
+import Dialog from 'primevue/dialog';
+import Select from 'primevue/select';
 
 const users = ref([]);
 const roles = ref([]);
 const showDialog = ref(false);
 const selectedUser = ref(null);
 const selectedRole = ref(null);
+const message = ref('');
+const filters = ref({
+    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+});
 
 const loadData = async () => {
   const [u, r] = await Promise.all([
-    http.get('/admin/users'),
-    http.get('/admin/roles')
+    http.get('/users'),
+    http.get('/users/roles')
   ]);
   users.value = u.data;
   roles.value = r.data;
@@ -98,54 +54,87 @@ const closeDialog = () => {
 };
 
 const assignRole = async () => {
-  await http.post('/admin/assign-role', {
-    userId: selectedUser.value.id,
-    roleName: selectedRole.value
-  });
+  try {
+    await http.post('/admin/assign-role', {
+      userId: selectedUser.value.id,
+      roleName: selectedRole.value
+    })
+  } catch (error) {
+    console.log(error);
+    message.value = error.response.data || 'Неверный запрос (400)'
+    return;
+  }
   showDialog.value = false;
   await loadData();
+  
 };
 </script>
 
+<template>
+  <DataTable :value="users" v-model:filters="filters" ilterDisplay="row" showGridlines paginator :rows="5" :globalFilterFields="['displayName', 'username', 'email']">
+    <template #header>
+        <div class="flex justify-between">
+          <IconField>
+            <InputIcon>
+              <i class="pi pi-search" />
+            </InputIcon>
+            <InputText v-model="filters['global'].value" placeholder="Поиск" />
+          </IconField>
+        </div>
+    </template>
+    <Column field="displayName" header="Имя" sortable></Column>
+    <Column field="username" header="Логин" sortable></Column>
+    <Column field="photo" header="Фото">
+      <template #body="slotProps">
+        <Avatar :image="slotProps.data.photo" size="large" shape="circle" :label="slotProps.data.displayName ? slotProps.data.displayName.charAt(0).toUpperCase() : ''"/>
+      </template>
+    </Column>
+    <Column field="email" header="Email" sortable></Column>
+    <Column field="isApproved" header="Подтверждён">
+      <template #body="slotProps">
+        <span :class="['status', slotProps.data.isApproved ? 'ok' : 'pending']">
+          {{ slotProps.data.isApproved ? 'Да' : 'Нет' }}
+        </span>
+      </template>
+    </Column>
+    <Column field="isActive" header="Активен">
+      <template #body="slotProps">
+        <span :class="['status', slotProps.data.isActive ? 'ok' : 'inactive']">
+          {{ slotProps.data.isActive ? 'Да' : 'Нет' }}
+        </span>
+      </template>
+    </Column>
+    <Column field="roles" header="Роли">
+      <template #body="slotProps">
+        <span v-for="r in slotProps.data.userRoles" :key="r" class="role-chip">{{ r.role.name }}</span>
+      </template>
+    </Column>
+    <Column header="Действия">
+      <template #body="slotProps">
+        <Button v-if="!slotProps.data.isApproved" size="small" severity="success" variant="text" @click="approveUser(slotProps.data.id)">✅ Подтвердить</Button>
+        <Button v-if="slotProps.data.isActive" size="small" severity="danger" variant="text" @click="deactivateUser(slotProps.data.id)">🚫 Отключить</Button>
+        <Button v-if="!slotProps.data.isActive" size="small" severity="success" variant="text">✅ Включить</Button>
+        <Button size="small" variant="text" severity="info" @click="openRoleDialog(slotProps.data)">🎯 Назначить роль</Button>
+      </template>
+    </Column>
+  </DataTable>
+  <Dialog v-model:visible="showDialog" @hide="closeDialog">
+    <template #header>
+      Назначить роль пользователю {{ selectedUser ? selectedUser.displayName : '' }}
+    </template>
+      <div class="mb-4">
+        <label for="role-select" class="block mb-2 font-medium">Выберите роль:</label>
+        <Select id="role-select" v-model="selectedRole" class="w-full" :options="roles" optionLabel="name" optionValue="name" placeholder="Выберите роль" />
+      </div>
+      <div class="flex justify-end gap-2">
+        <Button label="Отмена" severity="secondary" variant="text" size="small" @click="closeDialog" />
+        <Button label="Назначить" :disabled="!selectedRole" variant="text" size="small" @click="assignRole" />
+      </div>
+    <template #footer>
+      <p v-if="message" class="error-message text-red-500">{{ message }}</p>
+    </template>
+  </Dialog>
+</template>
+
 <style scoped>
-.admin-page {
-  padding: 2rem;
-}
-.user-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-.user-table th, .user-table td {
-  padding: 0.5rem;
-  border-bottom: 1px solid #ddd;
-  text-align: left;
-}
-.status.ok { color: green; }
-.status.pending { color: orange; }
-.status.inactive { color: red; }
-.role-chip {
-  background: #eef;
-  border-radius: 8px;
-  padding: 2px 6px;
-  margin-right: 4px;
-}
-.dialog {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.3);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-.dialog-content {
-  background: #fff;
-  padding: 1rem;
-  border-radius: 8px;
-  width: 300px;
-}
-.dialog-actions {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 1rem;
-}
 </style>
