@@ -1,17 +1,88 @@
+<script setup>
+import { ref, onMounted } from 'vue';
+import Card from 'primevue/card';
+import InputText from 'primevue/inputtext';
+import Button from 'primevue/button';
+import Avatar from 'primevue/avatar';
+import http from '@/api/http';
+
+const profile = ref({});
+const message = ref('');
+
+onMounted(async () => {
+  const response =  await http.get('/Auth/me');
+  profile.value = response.data;
+});
+
+const updateProfile = async () => {
+  await http.put('/Profile/update', profile.value).then(response => {
+    message.value = 'Профиль успешно обновлен.';
+  }).catch(error => {
+    message.value = 'Ошибка при обновлении профиля.';
+  });
+};
+
+const onFileChange = async (event) => {
+  const file = event.target.files[0];
+  if (file) {
+    const formData = new FormData();
+    formData.append('photo', file);
+
+    try {
+      const response = await http.post('/Auth/upload-avatar', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      profile.value.photo = response.data.photo;
+      message.value = 'Аватар успешно обновлен.';
+    } catch (error) {
+      message.value = 'Ошибка при загрузке аватара.';
+    }
+  }
+};
+
+</script>
+
 <template>
-  <div class="profile-page">
-    <h2>Мой профиль</h2>
-
-    <form @submit.prevent="updateProfile">
-      <label>Имя:</label>
-      <input v-model="profile.displayName" type="text" />
-
-      <label>Email:</label>
-      <input v-model="profile.email" type="email" />
-
-      <label>Telegram username:</label>
-      <input v-model="profile.telegramUsername" type="text" placeholder="@username" />
-
+  <Card style="width: 50%; overflow: hidden" class="m-auto">
+    <template #title>
+      Профиль пользователя
+    </template>
+    <template #subtitle>
+      Управление информацией аккаунта
+    </template>
+    <template #content>
+      <form>
+        
+        <div class="flex justify-center mb-4">
+          <input
+            ref="fileInput"
+            type="file"
+            accept="image/*"
+            class="hidden"
+            @change="onFileChange"
+          />
+          <Avatar
+            :label="profile.displayName ? profile.displayName.charAt(0).toUpperCase() : ''"
+            shape="circle"
+            class="m-auto"
+            style="width: 150px; height: 150px;"
+            @click="$refs.fileInput.click()"
+          />
+        </div>
+        <div class="flex flex-col gap-1 mb-4">
+            <InputText v-model="profile.displayName" type="text" placeholder="Имя" fluid />
+        </div>
+        <div class="flex flex-col gap-1 mb-4">
+            <InputText v-model="profile.email" type="text" placeholder="Email" fluid />
+        </div>
+        <div class="flex flex-col gap-1 mb-4">
+            <InputText v-model="profile.telegramUsername" type="text" placeholder="@username" fluid />
+        </div>
+      </form>
+    </template>
+    <template #footer>
       <div class="tg-status">
         <template v-if="profile.telegramChatId">
           ✅ Telegram привязан (Chat ID: {{ profile.telegramChatId }})
@@ -22,62 +93,14 @@
           после чего система автоматически свяжет аккаунт.
         </template>
       </div>
-
-      <button type="submit">💾 Сохранить</button>
-    </form>
-  </div>
+      <Button @click="updateProfile" severity="secondary" label="Сохранить" fluid />
+      <div class="mt-2 text-sm text-gray-500" v-if="message">
+        {{ message }}
+      </div>
+    </template>
+  </Card>
 </template>
 
-<script setup>
-import { ref, onMounted } from 'vue';
-import http from '@/api/http';
-
-const profile = ref({});
-
-const loadProfile = async () => {
-  const res = await http.get('/profile/me');
-  profile.value = res.data;
-};
-
-onMounted(loadProfile);
-
-const updateProfile = async () => {
-  await http.put('/profile/update', {
-    displayName: profile.value.displayName,
-    email: profile.value.email,
-    telegramUsername: profile.value.telegramUsername,
-  });
-  alert('Профиль обновлён');
-  await loadProfile();
-};
-</script>
-
 <style scoped>
-.profile-page {
-  padding: 2rem;
-  max-width: 480px;
-  margin: 0 auto;
-}
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-input {
-  padding: 0.6rem;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-}
-button {
-  background: #42b883;
-  color: white;
-  padding: 0.7rem;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-.tg-status {
-  font-size: 0.9rem;
-  color: #333;
-}
+
 </style>
