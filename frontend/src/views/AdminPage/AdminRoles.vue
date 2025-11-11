@@ -1,11 +1,84 @@
+<template>
+  <div class="admin-page">
+    <h2>Роли пользователей</h2>
+
+    <!-- Таблица ролей -->
+    <div class="role-actions">
+      <input v-model="newRole.name" placeholder="Название роли" />
+      <input v-model="newRole.description" placeholder="Описание" />
+      <button @click="createRole">➕ Добавить</button>
+    </div>
+
+    <table class="role-table">
+      <thead>
+        <tr>
+          <th>Роль</th>
+          <th>Описание</th>
+          <th>Пользователей</th>
+          <th>Действия</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="r in roles" :key="r.id">
+          <td>{{ r.name }}</td>
+          <td>{{ r.description }}</td>
+          <td>{{ r.usersCount }}</td>
+          <td>
+            <button @click="openRoleEditor(r)">👥 Пользователи</button>
+            <button @click="editRole(r)">✏️</button>
+            <button @click="deleteRole(r.id)">🗑️</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Диалог редактирования роли -->
+    <div v-if="editDialog" class="dialog">
+      <div class="dialog-content">
+        <h3>Редактировать роль</h3>
+        <label>Название</label>
+        <input v-model="editRoleData.name" />
+        <label>Описание</label>
+        <input v-model="editRoleData.description" />
+        <div class="dialog-actions">
+          <button @click="updateRole">💾 Сохранить</button>
+          <button @click="closeDialogs">Отмена</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Диалог назначения пользователей -->
+    <div v-if="userDialog" class="dialog">
+      <div class="dialog-content large">
+        <h3>Назначить пользователей для роли "{{ selectedRole?.name }}"</h3>
+
+        <div class="user-list">
+          <div v-for="u in users" :key="u.id" class="user-item">
+            <input
+              type="checkbox"
+              :id="u.id"
+              :value="u.id"
+              v-model="selectedUserIds"
+            />
+            <label :for="u.id">
+              {{ u.displayName }} ({{ u.username }})
+              <small v-if="u.roles.length">[{{ u.roles.join(', ') }}]</small>
+            </label>
+          </div>
+        </div>
+
+        <div class="dialog-actions">
+          <button @click="saveUsersForRole">💾 Сохранить</button>
+          <button @click="closeDialogs">Отмена</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
 <script setup>
 import { ref, onMounted } from 'vue';
 import http from '@/api/http';
-import DataTable from 'primevue/datatable';
-import Column from 'primevue/column';
-import InputText from 'primevue/inputtext';
-import Button from 'primevue/button';
-import Dialog from 'primevue/dialog';
 
 const roles = ref([]);
 const users = ref([]);
@@ -15,7 +88,6 @@ const selectedUserIds = ref([]);
 const editDialog = ref(false);
 const userDialog = ref(false);
 const editRoleData = ref({});
-const deleteDialog = ref(false);
 
 const loadRoles = async () => {
   const res = await http.get('/admin/roles');
@@ -41,10 +113,10 @@ const createRole = async () => {
 };
 
 // 🟦 Удаление роли
-const deleteRole = async () => {
-  await http.delete(`/admin/roles/${selectedRole.value.id}`);
+const deleteRole = async (id) => {
+  if (!confirm('Удалить роль?')) return;
+  await http.delete(`/admin/roles/${id}`);
   await loadRoles();
-  selectedRole.value = null;
 };
 
 // 🟨 Открыть редактирование
@@ -57,11 +129,6 @@ const updateRole = async () => {
   await http.put(`/admin/roles/${editRoleData.value.id}`, editRoleData.value);
   await loadRoles();
   editDialog.value = false;
-};
-
-const openDeleteDialog = (role) => {
-  selectedRole.value = role;
-  deleteDialog.value = true;
 };
 
 // 🟪 Открыть пользователей
@@ -99,90 +166,79 @@ const saveUsersForRole = async () => {
   await loadUsers();
   await loadRoles();
   userDialog.value = false;
-  selectedRole.value = null;
 };
 
 // 🔘 Закрыть все диалоги
 const closeDialogs = () => {
   editDialog.value = false;
   userDialog.value = false;
-  deleteDialog.value = false;
-  selectedRole.value = null;
 };
 </script>
 
-<template>
-  <DataTable :value="roles">
-    <template #header>
-      <h2>Роли пользователей</h2>
-      <div class="role-actions" style="display: flex; gap: 0.5rem; align-items: center;">
-        <InputText v-model="newRole.name" size="small" placeholder="Название" />
-        <InputText v-model="newRole.description" size="small" placeholder="Описание" />
-        <Button @click="createRole" size="small">➕ Добавить</Button>
-      </div>
-    </template>
-    <Column field="name" header="Роль" />
-    <Column field="description" header="Описание" />
-    <Column field="usersCount" header="Пользователей" />
-    <Column header="Действия">
-      <template #body="{ data }" style="">
-        <div style="flex-grow: 1; display: flex; gap: 0.5rem;">
-          <Button @click="openRoleEditor(data)" size="small" severity="info" variant="text">👥 Пользователи</Button>
-          <Button @click="editRole(data)" size="small" severity="info" variant="text">✏️ Редактировать</Button>
-          <Button @click="openDeleteDialog(data)" size="small" severity="danger" variant="text">🗑️ Удалить</Button>
-        </div>
-      </template>
-    </Column>
-  </DataTable>
-
-  <Dialog v-model:visible="editDialog" header="Редактировать роль">
-    <div class="flex flex-col gap-3 mb-3">
-      <label for="username">Название</label>
-      <InputText id="username" v-model="editRoleData.name" aria-describedby="username-help" fluid/>
-    </div>
-    <div class="flex flex-col gap-3 mb-3">
-      <label for="description">Описание</label>
-        <InputText id="description" v-model="editRoleData.description" aria-describedby="description-help" fluid />
-    </div>
-    <Button @click="updateRole" size="small" severity="success" variant="text">💾 Сохранить</Button>
-    <Button @click="closeDialogs" size="small" severity="secondary" variant="text">Отмена</Button>
-  </Dialog>
-
-  <Dialog v-model:visible="userDialog" :style="{ width: '50vw' }">
-    <template #header>
-      <h3>Назначить пользователей для роли "{{ selectedRole?.name }}"</h3>
-    </template>
-      <div class="user-list" style="max-height: 400px; overflow-y: auto;">
-        <div v-for="u in users" :key="u.id">
-          <input
-            type="checkbox"
-            :id="u.id"
-            :value="u.id"
-            v-model="selectedUserIds"
-          />
-          <label :for="u.id">
-            {{ u.displayName }} ({{ u.username }})
-            <small v-if="u.roles.length">[{{ u.roles.join(', ') }}]</small>
-          </label>
-        </div>
-      </div>
-    <template #footer>
-      <div class="dialog-actions" style="flex-grow: 1; display: flex; gap: 0.5rem;">
-        <Button @click="saveUsersForRole" size="small" severity="success" variant="text">💾 Сохранить</Button>
-        <Button @click="closeDialogs" size="small" severity="secondary" variant="text">Отмена</Button>
-      </div>
-    </template>
-  </Dialog>
-
-  <Dialog v-model:visible="deleteDialog" header="Подтвердите удаление">
-    <p>Вы уверены, что хотите удалить эту роль?</p>
-    <div class="dialog-actions" style="flex-grow: 1; display: flex; gap: 0.5rem;">
-      <Button @click="deleteRole(); closeDialogs()" size="small" severity="danger" variant="text">🗑️ Удалить</Button>
-      <Button @click="closeDialogs" size="small" severity="secondary" variant="text">Отмена</Button>
-    </div>
-  </Dialog>
-
-</template>
-
 <style scoped>
+.admin-page {
+  padding: 2rem;
+}
+
+.role-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 1rem;
+}
+
+.role-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.role-table th,
+.role-table td {
+  padding: 0.5rem;
+  border-bottom: 1px solid #ddd;
+}
+
+button {
+  margin-right: 0.3rem;
+  cursor: pointer;
+}
+
+.dialog {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.dialog-content {
+  background: white;
+  padding: 1rem;
+  border-radius: 10px;
+  width: 400px;
+}
+
+.dialog-content.large {
+  width: 600px;
+  max-height: 80vh;
+  overflow: auto;
+}
+
+.user-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.user-item {
+  padding: 4px;
+  border-bottom: 1px solid #eee;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1rem;
+}
 </style>
