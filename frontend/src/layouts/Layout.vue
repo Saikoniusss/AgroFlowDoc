@@ -36,8 +36,6 @@ const toggleMenu = (event) => {
     }
 };
 
-console.log('Auth user in Layout:', auth.user);
-
 </script>
 
 
@@ -60,26 +58,27 @@ console.log('Auth user in Layout:', auth.user);
                     icon: 'pi pi-wrench'
                 },
                 {
-                    icon: 'pi pi-clock'
+                    icon: 'pi pi-users',
+                    command: () => router.push('/admin/users'),
+                    visible: auth.user?.roles?.includes('Administrator'),
+
                 },
                 {
-                    icon: 'pi pi-bars'
-                },
-                {
-                    icon: 'pi pi-table'
+                    icon: 'pi pi-cog',
+                    command: () => router.push('/admin/roles'),
+                    visible: auth.user?.roles?.includes('Administrator'),
                 }
         ]">
             <template #start>
                 <span class="layout-logo text-xl font-bold ml-2 mr-2">AgroFlow!</span>
             </template>
             <template #end>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 cursor-pointer" @click="toggleMenu">
                     <Avatar 
                         image="https://primefaces.org/cdn/primevue/images/avatar/amyelsner.png" 
                         shape="circle"
                         size="large"
-                        class="cursor-pointer border-2 border-blue-500"
-                        @click="toggleMenu"
+                        class="border-2 border-blue-500"
                     />
                     <span class="font-bold m-auto">{{ auth.user?.displayName || 'Профиль' }}</span>
                 </div>
