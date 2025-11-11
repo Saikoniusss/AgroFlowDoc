@@ -41,6 +41,16 @@ export const useAuthStore = defineStore('auth', {
         this.user = null;
       }
     },
+       async fetchMe() {
+      if (!this.token) return
+      axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`
+      try {
+        const res = await axios.get(import.meta.env.VITE_API_BASE_URL + '/auth/me')
+        this.user = res.data
+      } catch {
+        this.logout()
+      }
+    },
     logout() {
       this.token = null;
       this.user = null;

@@ -3,7 +3,7 @@ import './style.css'
 import App from './App.vue'
 import router from './routers/index.js'
 import { createPinia } from 'pinia'
-
+import ToastService from 'primevue/toastservice'
 import PrimeVue from 'primevue/config'
 import 'primeicons/primeicons.css'
 import 'primeflex/primeflex.css'
@@ -19,4 +19,5 @@ const app = createApp(App)
             preset: Aura
         }
     })
+    app.use(ToastService) // <-- регистрация ToastService
     app.mount('#app')

@@ -33,6 +33,18 @@ const router = createRouter({
         meta: { requiresAuth: true, requiresAdmin: true },
         },
         {
+        path: '/admin/templates',
+        component: () => import('@/views/AdminWorkFlow/TemplatesView.vue'), meta: { requiresAuth: true, requiresAdmin: true }
+        },
+        {
+        path: '/admin/routes',
+        component: () => import('@/views/AdminWorkFlow/RoutesView.vue'), meta: { requiresAuth: true, requiresAdmin: true }
+        },
+        {
+        path: '/admin/processes',
+        component: () => import('@/views/AdminWorkFlow/ProcessesView.vue'), meta: { requiresAuth: true, requiresAdmin: true }
+        },
+        {
             component: () => import('../layouts/Layout.vue'),
             children: [
                 {
@@ -95,9 +107,14 @@ router.beforeEach((to, from, next) => {
 
   if (to.meta.requiresAdmin && !auth.user?.roles?.includes('Administrator')) {
     next('/documents');
-    return;
+    return next('/login')
   }
 
+  if (to.meta.requiresAuth) {
+    if (!auth.token) {
+      return next('/login')
+    }
+  }
   next();
 });
 

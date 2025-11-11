@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Domain.Entities;
 public class Role
 {
@@ -5,5 +7,6 @@ public class Role
     public string Name { get; set; } = default!;
     public string? Description { get; set; }
 
+    [JsonIgnore]
     public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
 }
