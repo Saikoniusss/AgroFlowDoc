@@ -6,6 +6,7 @@ import Column from 'primevue/column';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
+import Card from 'primevue/card';
 
 const roles = ref([]);
 const users = ref([]);
@@ -112,28 +113,32 @@ const closeDialogs = () => {
 </script>
 
 <template>
-  <DataTable :value="roles">
-    <template #header>
-      <h2>Роли пользователей</h2>
-      <div class="role-actions" style="display: flex; gap: 0.5rem; align-items: center;">
-        <InputText v-model="newRole.name" size="small" placeholder="Название" />
-        <InputText v-model="newRole.description" size="small" placeholder="Описание" />
-        <Button @click="createRole" size="small">➕ Добавить</Button>
-      </div>
+  <Card>
+    <template #content>
+      <DataTable :value="roles" size="small">
+        <template #header>
+          <h2 class="m-2">Роли пользователей</h2>
+          <div class="role-actions" style="display: flex; gap: 0.5rem; align-items: center;">
+            <InputText v-model="newRole.name" size="small" placeholder="Название" />
+            <InputText v-model="newRole.description" size="small" placeholder="Описание" />
+            <Button @click="createRole" size="small">➕ Добавить</Button>
+          </div>
+        </template>
+        <Column field="name" header="Роль" />
+        <Column field="description" header="Описание" />
+        <Column field="usersCount" header="Пользователей" />
+        <Column header="Действия">
+          <template #body="{ data }" style="">
+            <div style="flex-grow: 1; display: flex; gap: 0.5rem;">
+              <Button @click="openRoleEditor(data)" size="small" severity="info" variant="text">👥 Пользователи</Button>
+              <Button @click="editRole(data)" size="small" severity="info" variant="text">✏️ Редактировать</Button>
+              <Button @click="openDeleteDialog(data)" size="small" severity="danger" variant="text">🗑️ Удалить</Button>
+            </div>
+          </template>
+        </Column>
+      </DataTable>
     </template>
-    <Column field="name" header="Роль" />
-    <Column field="description" header="Описание" />
-    <Column field="usersCount" header="Пользователей" />
-    <Column header="Действия">
-      <template #body="{ data }" style="">
-        <div style="flex-grow: 1; display: flex; gap: 0.5rem;">
-          <Button @click="openRoleEditor(data)" size="small" severity="info" variant="text">👥 Пользователи</Button>
-          <Button @click="editRole(data)" size="small" severity="info" variant="text">✏️ Редактировать</Button>
-          <Button @click="openDeleteDialog(data)" size="small" severity="danger" variant="text">🗑️ Удалить</Button>
-        </div>
-      </template>
-    </Column>
-  </DataTable>
+  </Card>
 
   <Dialog v-model:visible="editDialog" header="Редактировать роль">
     <div class="flex flex-col gap-3 mb-3">

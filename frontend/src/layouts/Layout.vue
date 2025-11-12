@@ -43,29 +43,33 @@ const toggleMenu = (event) => {
     <div class="layout-container flex flex-column h-screen">
         <Menubar :model="[
                 {
-                    icon: 'pi pi-search'
-                },
-                {
-                    icon: 'pi pi-info-circle'
-                },
-                {
-                    icon: 'pi pi-sync'
-                },
-                {
-                    icon: 'pi pi-star'
-                },
-                {
-                    icon: 'pi pi-wrench'
-                },
-                {
                     icon: 'pi pi-users',
                     command: () => router.push('/admin/users'),
                     visible: auth.user?.roles?.includes('Administrator'),
-
                 },
                 {
-                    icon: 'pi pi-cog',
+                    icon: 'pi pi-key',
                     command: () => router.push('/admin/roles'),
+                    visible: auth.user?.roles?.includes('Administrator'),
+                },
+                {
+                    icon: 'pi pi-sitemap',
+                    command: () => router.push('/admin/routes'),
+                    visible: auth.user?.roles?.includes('Administrator'),
+                },
+                {
+                    icon: 'pi pi-file',
+                    command: () => router.push('/admin/templates'),
+                    visible: auth.user?.roles?.includes('Administrator'),
+                },
+                {
+                    icon: 'pi pi-sync',
+                    command: () => router.push('/admin/processes'),
+                    visible: auth.user?.roles?.includes('Administrator'),
+                },
+                {
+                    icon: 'pi pi-file-plus',
+                    command: () => router.push('/admin/processes'),
                     visible: auth.user?.roles?.includes('Administrator'),
                 }
         ]">
@@ -138,6 +142,9 @@ const toggleMenu = (event) => {
 </template>
 
 <style scoped>
+main {
+    padding: 0.5em !important;
+}
 .layout-container {
     height: 100vh;
     overflow: hidden;
