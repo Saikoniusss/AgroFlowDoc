@@ -1,38 +1,53 @@
 <template>
-    
+  <div class="page">
+    <h2>📄 Создание документа</h2>
+
+    <div class="grid">
+      <div
+        v-for="p in processes"
+        :key="p.id"
+        class="card"
+        @click="openProcess(p.id)"
+      >
+        <h3>{{ p.documentTemplate.name }}</h3>
+        <p>{{ p.documentTemplate.name }}</p>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
-import { useAuthStore } from '@/store/auth';
-import { useRouter } from 'vue-router';
+import { ref, onMounted } from "vue"
+import documentApi from "@/api/documentApi"
+import { useRouter } from "vue-router"
 
-const auth = useAuthStore();
-const router = useRouter();
+const processes = ref([])
+const router = useRouter()
 
-const logout = async () => {
-  await auth.logout();
-  router.push('/login');
-};
+onMounted(async () => {
+  const { data } = await documentApi.getProcesses()
+  processes.value = data
+})
+
+const openProcess = (id) => {
+  router.push(`/documents/create/${id}`)
+}
 </script>
 
 <style scoped>
-.page {
-  max-width: 800px;
-  margin: 80px auto;
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 260px);
+  gap: 16px;
+}
+.card {
+  padding: 16px;
   background: white;
-  padding: 2rem;
-  border-radius: 1rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-button {
-  background: #ff5555;
-  color: white;
-  border: none;
-  padding: 0.6rem 1.2rem;
-  border-radius: 0.5rem;
+  border-radius: 12px;
   cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
-button:hover {
-  background: #e04444;
+.card:hover {
+  background: #f3f3f3;
 }
 </style>

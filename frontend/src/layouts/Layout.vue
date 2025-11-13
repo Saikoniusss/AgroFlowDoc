@@ -95,7 +95,7 @@ const toggleMenu = (event) => {
                     {
                         label: 'Заявка',
                         icon: 'pi pi-fw pi-home',
-                        command: () => router.push('/application')
+                        command: () => router.push('/documents')
                     },
                     {
                         label: 'Счет на оплату',

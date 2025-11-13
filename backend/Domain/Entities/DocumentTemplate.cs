@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Domain.Entities;
 
 public class DocumentTemplate
@@ -8,5 +10,6 @@ public class DocumentTemplate
     public string? Description { get; set; }
 
     public ICollection<DocumentTemplateField> Fields { get; set; } = new List<DocumentTemplateField>();
+    [JsonIgnore]
     public ICollection<Process> Processes { get; set; } = new List<Process>();
 }

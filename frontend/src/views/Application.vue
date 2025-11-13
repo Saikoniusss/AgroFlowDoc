@@ -3,6 +3,6 @@
 
 <template>
     <div>
-        <h1>Welcome to the Заявка Page</h1>
+        <h1>Welcome to the Заявка Pageу</h1>
     </div>
 </template>

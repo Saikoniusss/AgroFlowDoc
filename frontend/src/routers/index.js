@@ -120,6 +120,22 @@ const router = createRouter({
                         }
                     ]
                 },
+                {
+                    path: '/documents',
+                    children: [
+                        {
+                        path: '',
+                        name: 'documents',
+                        component: () => import('@/views/document/DocumentList.vue')
+                        },
+                        {
+                        path: 'create/:processId',
+                        name: 'document-create',
+                        component: () => import('@/views/document/DocumentCreate.vue'),
+                        props: true
+                        }
+                    ]
+                },
             ]
         },
         {
