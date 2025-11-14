@@ -1,53 +1,50 @@
 <template>
   <div class="page">
-    <h2>📄 Создание документа</h2>
+    <h2>📄 Создать новый документ</h2>
 
-    <div class="grid">
-      <div
-        v-for="p in processes"
-        :key="p.id"
-        class="card"
-        @click="openProcess(p.id)"
-      >
-        <h3>{{ p.documentTemplate.name }}</h3>
-        <p>{{ p.documentTemplate.name }}</p>
-      </div>
-    </div>
+    <DataTable :value="processes" :loading="loading">
+      <Column field="name" header="Название процесса" />
+      <Column field="templateName" header="Шаблон" />
+      <Column>
+        <template #body="{ data }">
+          <Button label="Создать" icon="pi pi-plus"
+                  @click="openCreate(data.id)" />
+        </template>
+      </Column>
+    </DataTable>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue"
-import documentApi from "@/api/documentApi"
-import { useRouter } from "vue-router"
+import { ref, onMounted } from 'vue'
+import DataTable from 'primevue/datatable'
+import Column from 'primevue/column'
+import Button from 'primevue/button'
+import { useRouter, useRoute } from "vue-router"
+import documentApi from '@/api/documentApi'
 
-const processes = ref([])
+const route = useRoute()
 const router = useRouter()
+const processes = ref([])
+const loading = ref(false)
 
-onMounted(async () => {
-  const { data } = await documentApi.getProcesses()
-  processes.value = data
-})
+const load = async () => {
+  loading.value = true
+  try {
+    const { data } = await documentApi.getProcesses()
+    processes.value = data
+  } finally {
+    loading.value = false
+  }
+}
 
-const openProcess = (id) => {
+const openCreate = (id) => {
   router.push(`/documents/create/${id}`)
 }
+
+onMounted(load)
 </script>
 
 <style scoped>
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, 260px);
-  gap: 16px;
-}
-.card {
-  padding: 16px;
-  background: white;
-  border-radius: 12px;
-  cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-}
-.card:hover {
-  background: #f3f3f3;
-}
+.page { padding: 20px; }
 </style>

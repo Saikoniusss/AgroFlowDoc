@@ -2,75 +2,82 @@
   <div class="page">
     <h2>Создание документа</h2>
 
-    <div v-if="process">
-      <h3>{{ process.documentTemplate }}</h3>
+    <div class="card">
+      <h3>{{ template?.name }}</h3>
 
       <div class="form">
-        <label>Заголовок</label>
-        <input v-model="title" type="text" />
+        <label>Название документа</label>
+        <InputText v-model="title" class="w-full" />
 
-        <div v-for="f in process.documentTemplate?.fields" :key="f.id" class="field">
+        <div v-for="f in fields" :key="f.id" class="form-group">
           <label>{{ f.label }}</label>
 
-          <input v-if="f.fieldType === 'text'" v-model="fields[f.name]" type="text" />
+          <InputText v-if="f.fieldType === 'text'" v-model="model[f.name]" class="w-full" />
+          <InputNumber v-if="f.fieldType === 'number'" v-model="model[f.name]" class="w-full" />
+          <Calendar v-if="f.fieldType === 'date'" v-model="model[f.name]" class="w-full" />
 
-          <input v-if="f.fieldType === 'number'" v-model="fields[f.name]" type="number" />
-
-          <input v-if="f.fieldType === 'date'" v-model="fields[f.name]" type="date" />
-
-          <select v-if="f.fieldType === 'select'" v-model="fields[f.name]">
-            <option v-for="o in JSON.parse(f.optionsJson)" :key="o" :value="o">
-              {{ o }}
-            </option>
-          </select>
+          <Dropdown
+            v-if="f.fieldType === 'select'"
+            :options="JSON.parse(f.optionsJson || '[]')"
+            v-model="model[f.name]"
+            class="w-full"
+          />
         </div>
+      </div>
 
-        <Button label="Создать" icon="pi pi-check" @click="create" />
+      <div class="actions">
+        <Button label="Отмена" class="p-button-secondary" @click="router.push('/documents')" />
+        <Button label="Сохранить как черновик" class="p-button-warning" @click="saveDraft" />
+        <Button label="Утвердить" class="p-button-success" @click="submit" />
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue"
-import documentApi from "@/api/documentApi"
-import { useRouter, useRoute } from "vue-router"
+import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useToast } from 'primevue/usetoast'
+import documentApi from '@/api/documentApi'
 
 const route = useRoute()
 const router = useRouter()
+const toast = useToast()
 
-const process = ref(null)
-const fields = ref({})
-const title = ref("")
+const processId = route.query.processId
+const template = ref(null)
+const fields = ref([])
+const model = ref({})
+const title = ref('')
 
 onMounted(async () => {
-  const { data } = await documentApi.getProcess(route.params.processId)
-  process.value = data
+  const id = route.params.processId
+  const { data } = await documentApi.getProcessDetails(id)
+  template.value = data
+  fields.value =  data.template.fields
 
-  // Заполняем дефолтные поля
-  data.documentTemplate.fields.forEach(f => {
-    fields.value[f.name] = ""
+  fields.value.forEach(f => {
+    model.value[f.name] = ''
   })
 })
 
-const create = async () => {
-  const payload = {
-    processId: process.value.id,
+const saveDraft = async () => {
+  await documentApi.createDocument({
+    processId: route.params.processId,
     title: title.value,
-    fieldsJson: JSON.stringify(fields.value)
-  }
+    fieldsJson: JSON.stringify(model.value),
+    submit: false
+  })
+  router.push('/documents')
+}
 
-  const { data } = await documentApi.createDocument(payload)
-  router.push(`/documents/${data.id}`)
+const submit = async () => {
+  await documentApi.createDocument({
+    processId: route.params.processId,
+    title: title.value,
+    fieldsJson: JSON.stringify(model.value),
+    submit: true
+  })
+  router.push('/documents')
 }
 </script>
-
-<style scoped>
-.field {
-  margin-bottom: 14px;
-}
-.form {
-  margin-top: 20px;
-  max-width: 400px;
-}
-</style>

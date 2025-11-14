@@ -21,7 +21,7 @@ export default {
   },
 
   // Получить процесс + шаблон + шаги маршрута
-  getProcess(processId) {
+  getProcessDetails(processId) {
     return api.get(`/process/${processId}`)
   },
 

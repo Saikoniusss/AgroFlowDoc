@@ -4,6 +4,7 @@ using Domain.Entities;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using Application.Worfkflow.DocumentDTO;
 
 namespace Api.Controllers;
 
@@ -12,48 +13,86 @@ namespace Api.Controllers;
 public class DocumentController : ControllerBase
 {
     private readonly DocflowDbContext _db;
-    public DocumentController(DocflowDbContext db) => _db = db;
+    public DocumentController(DocflowDbContext db) 
+    {
+        _db = db; 
+    }
 
+     // 1. Список процессов (для списка "Создать документ")
     [HttpGet("processes")]
     public async Task<IActionResult> GetProcesses()
     {
-        var list = await _db.Processes
-            .Include(p => p.DocumentTemplate) // подтягиваем шаблон
-            .Include(p => p.WorkflowRoute)    // подтягиваем маршрут
-            .Select(p => new 
+        var result = await _db.Processes
+            .Include(p => p.DocumentTemplate)
+            .Select(p => new
             {
                 p.Id,
                 p.Name,
-                DocumentTemplate = new
-                {
-                    p.DocumentTemplate.Id,
-                    p.DocumentTemplate.Name,
-                    p.DocumentTemplate.Description
-                },
-                WorkflowRoute = new 
-                {
-                    p.WorkflowRoute.Id,
-                    p.WorkflowRoute.Name
-                }
+                p.Code,
+                TemplateName = p.DocumentTemplate.Name
             })
             .ToListAsync();
 
-        return Ok(list);
+        return Ok(result);
     }
 
-    // 2. Получить шаблон для конкретного процесса
-    [HttpGet("process/{processId}")]
-    public async Task<IActionResult> GetProcessTemplate(Guid processId)
+    // 2. Детали процесса для формы создания
+    [HttpGet("process/{id:guid}")]
+    public async Task<IActionResult> GetProcessDetails(Guid id)
     {
-        var process = await _db.Processes
-            .Include(p => p.DocumentTemplate).ThenInclude(t => t.Fields.OrderBy(f => f.Order))
-            .Include(p => p.WorkflowRoute).ThenInclude(r => r.Steps.OrderBy(s => s.StepOrder))
-            .FirstOrDefaultAsync(p => p.Id == processId);
+        var p = await _db.Processes
+            .Include(p => p.DocumentTemplate)
+                .ThenInclude(t => t.Fields)
+            .Include(p => p.WorkflowRoute)
+                .ThenInclude(r => r.Steps)
+            .FirstOrDefaultAsync(p => p.Id == id);
 
-        if (process == null)
-            return NotFound();
+        if (p == null) return NotFound();
 
-        return Ok(process);
+        var dto = new ProcessDetailsDto
+        {
+            Id = p.Id,
+            Name = p.Name,
+            Code = p.Code,
+            Template = new TemplateDto
+            {
+                Id = p.DocumentTemplate.Id,
+                Name = p.DocumentTemplate.Name,
+                Code = p.DocumentTemplate.Code,
+                Fields = p.DocumentTemplate.Fields
+                    .OrderBy(f => f.Order)
+                    .Select(f => new TemplateFieldDto
+                    {
+                        Id = f.Id,
+                        Name = f.Name,
+                        Label = f.Label,
+                        FieldType = f.FieldType,
+                        IsRequired = f.IsRequired,
+                        Order = f.Order,
+                        OptionsJson = f.OptionsJson
+                    })
+                    .ToList()
+            },
+            WorkflowRoute = new WorkflowRouteDto
+            {
+                Id = p.WorkflowRoute.Id,
+                Name = p.WorkflowRoute.Name,
+                Steps = p.WorkflowRoute.Steps
+                    .OrderBy(s => s.StepOrder)
+                    .Select(s => new WorkflowStepDto
+                    {
+                        Id = s.Id,
+                        StepOrder = s.StepOrder,
+                        StepName = s.StepName,
+                        IsParallel = s.IsParallel,
+                        MinApprovals = s.MinApprovals,
+                        ApproversJson = s.ApproversJson
+                    })
+                    .ToList()
+            }
+        };
+
+        return Ok(dto);
     }
 
     // 3. Создать документ
@@ -65,7 +104,7 @@ public class DocumentController : ControllerBase
         // Загружаем процесс
         var process = await _db.Processes
             .Include(p => p.DocumentTemplate).ThenInclude(t => t.Fields)
-            .Include(p => p.WorkflowRoute).ThenInclude(r => r.Steps)
+            .Include(p => p.WorkflowRoute).ThenInclude(r => r.Steps.OrderBy(s => s.StepOrder))
             .FirstOrDefaultAsync(p => p.Id == req.ProcessId);
 
         if (process == null)
@@ -83,32 +122,45 @@ public class DocumentController : ControllerBase
             CreatedById = userId,
             Title = req.Title,
             FieldsJson = req.FieldsJson,
-            Status = "Draft"
+            Status = req.Submit ? "InProgress" : "Draft",
+            CreatedAtUtc = DateTime.UtcNow,
+            UpdatedAtUtc = DateTime.UtcNow
         };
-
-        // Создаём tracking steps
-        foreach (var step in process.WorkflowRoute.Steps.OrderBy(s => s.StepOrder))
-        {
-            doc.WorkflowTrackers.Add(new WFTracker
-            {
-                Id = Guid.NewGuid(),
-                DocumentId = doc.Id,
-                StepOrder = step.StepOrder,
-                StepName = step.StepName,
-                IsParallel = step.IsParallel,
-                MinApprovals = step.MinApprovals,
-                ApproversJson = step.ApproversJson,
-                Status = "Pending"
-            });
-        }
-
-        // Устанавливаем CurrentStep
-        doc.CurrentStep = doc.WorkflowTrackers.OrderBy(s => s.StepOrder).FirstOrDefault();
 
         _db.Documents.Add(doc);
         await _db.SaveChangesAsync();
 
-        return Ok(new { documentId = doc.Id, systemNumber = doc.SystemNumber });
+        // Создаём tracking steps
+        if (req.Submit)
+        {
+            foreach (var step in process.WorkflowRoute!.Steps.OrderBy(x => x.StepOrder))
+            {
+                var tracker = new WFTracker
+                {
+                    Id = Guid.NewGuid(),
+                    DocumentId = doc.Id,
+                    StepOrder = step.StepOrder,
+                    StepName = step.StepName,
+                    IsParallel = step.IsParallel,
+                    MinApprovals = step.MinApprovals,
+                    ApproversJson = step.ApproversJson,
+                    Status = step.StepOrder == 1 ? "Pending" : "Waiting"
+                };
+
+                _db.WFTrackers.Add(tracker);
+
+                if (step.StepOrder == 1)
+                    doc.CurrentStepId = tracker.Id;
+            }
+        }
+         await _db.SaveChangesAsync();
+    
+
+        return Ok(new
+        {
+            message = req.Submit ? "Документ отправлен на согласование" : "Черновик сохранён",
+            documentId = doc.Id
+        });
     }
 }
 
@@ -117,4 +169,5 @@ public class CreateDocumentRequest
     public Guid ProcessId { get; set; }
     public string Title { get; set; } = default!;
     public string FieldsJson { get; set; } = "{}";
+    public bool Submit { get; set; } // true = отправить, false = сохранить draft
 }

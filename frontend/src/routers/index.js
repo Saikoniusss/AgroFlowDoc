@@ -133,6 +133,12 @@ const router = createRouter({
                         name: 'document-create',
                         component: () => import('@/views/document/DocumentCreate.vue'),
                         props: true
+                        },
+                        {
+                            path: 'view/:id',
+                            name: 'document-view',
+                            component: () => import('@/views/document/DocumentView.vue'),
+                            props: true 
                         }
                     ]
                 },
