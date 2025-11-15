@@ -43,35 +43,41 @@ const toggleMenu = (event) => {
     <div class="layout-container flex flex-column h-screen">
         <Menubar :model="[
                 {
-                    icon: 'pi pi-users',
-                    command: () => router.push('/admin/users'),
+                    icon: 'pi pi-cog',
                     visible: auth.user?.roles?.includes('Administrator'),
+                    items: [
+                        {
+                            label: 'Пользователи',
+                            icon: 'pi pi-users',
+                            command: () => router.push('/admin/users'),
+                            visible: auth.user?.roles?.includes('Administrator'),
+                        },
+                        {
+                            label: 'Роли',
+                            icon: 'pi pi-key',
+                            command: () => router.push('/admin/roles'),
+                            visible: auth.user?.roles?.includes('Administrator'),
+                        },
+                        {
+                            label: 'Маршруты',
+                            icon: 'pi pi-sitemap',
+                            command: () => router.push('/admin/routes'),
+                            visible: auth.user?.roles?.includes('Administrator'),
+                        },
+                        {
+                            label: 'Шаблоны',
+                            icon: 'pi pi-file',
+                            command: () => router.push('/admin/templates'),
+                            visible: auth.user?.roles?.includes('Administrator'),
+                        },
+                        {
+                            label: 'Процессы',
+                            icon: 'pi pi-sync',
+                            command: () => router.push('/admin/processes'),
+                            visible: auth.user?.roles?.includes('Administrator'),
+                        },
+                    ]
                 },
-                {
-                    icon: 'pi pi-key',
-                    command: () => router.push('/admin/roles'),
-                    visible: auth.user?.roles?.includes('Administrator'),
-                },
-                {
-                    icon: 'pi pi-sitemap',
-                    command: () => router.push('/admin/routes'),
-                    visible: auth.user?.roles?.includes('Administrator'),
-                },
-                {
-                    icon: 'pi pi-file',
-                    command: () => router.push('/admin/templates'),
-                    visible: auth.user?.roles?.includes('Administrator'),
-                },
-                {
-                    icon: 'pi pi-sync',
-                    command: () => router.push('/admin/processes'),
-                    visible: auth.user?.roles?.includes('Administrator'),
-                },
-                {
-                    icon: 'pi pi-file-plus',
-                    command: () => router.push('/admin/processes'),
-                    visible: auth.user?.roles?.includes('Administrator'),
-                }
         ]">
             <template #start>
                 <span class="layout-logo text-xl font-bold ml-2 mr-2">AgroFlow!</span>
@@ -93,45 +99,109 @@ const toggleMenu = (event) => {
             <aside class="layout-sidebar surface-50 border-right-1 border-gray-200 flex flex-column":class="{ hidden: !sidebarVisible && isMobile }">
                 <PanelMenu :model="[
                     {
-                        label: 'Заявка',
-                        icon: 'pi pi-fw pi-home',
-                        command: () => router.push('/documents')
+                        label: 'Мои задачи',
+                        icon: 'pi pi-list-check',
+                        items: [
+                            {
+                                label: 'Заявка',
+                                icon: 'pi pi-fw pi-home',
+                                command: () => router.push('/documents')
+                            },
+                            {
+                                label: 'Счет на оплату',
+                                icon: 'pi pi-fw pi-cog',
+                                command: () => router.push('/invoice')
+                            },
+                            {
+                                label: 'Заявка на оприходование',
+                                icon: 'pi pi-fw pi-id-card',
+                                command: () => router.push('/receipt-request')
+                            },
+                            {
+                                label: 'Завка на отпуск со склада',
+                                icon: 'pi pi-fw pi-inbox',
+                                command: () => router.push('/issue-request')
+                            },
+                        ]
                     },
                     {
-                        label: 'Счет на оплату',
-                        icon: 'pi pi-fw pi-cog',
-                        command: () => router.push('/invoice')
+                        label: 'Черновики',
+                        icon: 'pi pi-bookmark',
+                        items: [
+                            {
+                                label: 'Заявка',
+                                icon: 'pi pi-fw pi-home',
+                                command: () => router.push('/documents')
+                            },
+                            {
+                                label: 'Счет на оплату',
+                                icon: 'pi pi-fw pi-cog',
+                                command: () => router.push('/invoice')
+                            },
+                            {
+                                label: 'Заявка на оприходование',
+                                icon: 'pi pi-fw pi-id-card',
+                                command: () => router.push('/receipt-request')
+                            },
+                            {
+                                label: 'Завка на отпуск со склада',
+                                icon: 'pi pi-fw pi-inbox',
+                                command: () => router.push('/issue-request')
+                            },
+                        ]
                     },
                     {
-                        label: 'Заявка на оприходование на склад',
-                        icon: 'pi pi-fw pi-id-card',
-                        command: () => router.push('/receipt-request')
+                        label: 'На согласовании',
+                        icon: 'pi pi-eye',
+                        items: [
+                            {
+                                label: 'Заявка',
+                                icon: 'pi pi-fw pi-home',
+                                command: () => router.push('/documents')
+                            },
+                            {
+                                label: 'Счет на оплату',
+                                icon: 'pi pi-fw pi-cog',
+                                command: () => router.push('/invoice')
+                            },
+                            {
+                                label: 'Заявка на оприходование',
+                                icon: 'pi pi-fw pi-id-card',
+                                command: () => router.push('/receipt-request')
+                            },
+                            {
+                                label: 'Завка на отпуск со склада',
+                                icon: 'pi pi-fw pi-inbox',
+                                command: () => router.push('/issue-request')
+                            },
+                        ]
                     },
                     {
-                        label: 'Завка на отпуск со склада',
-                        icon: 'pi pi-fw pi-inbox',
-                        command: () => router.push('/issue-request')
+                        label: 'Архив',
+                        icon: 'pi pi-box',
+                        items: [
+                            {
+                                label: 'Заявка',
+                                icon: 'pi pi-fw pi-home',
+                                command: () => router.push('/documents')
+                            },
+                            {
+                                label: 'Счет на оплату',
+                                icon: 'pi pi-fw pi-cog',
+                                command: () => router.push('/invoice')
+                            },
+                            {
+                                label: 'Заявка на оприходование',
+                                icon: 'pi pi-fw pi-id-card',
+                                command: () => router.push('/receipt-request')
+                            },
+                            {
+                                label: 'Завка на отпуск со склада',
+                                icon: 'pi pi-fw pi-inbox',
+                                command: () => router.push('/issue-request')
+                            },
+                        ]
                     },
-                    {
-                        label: 'Счет на оплату расходы на экспорт',
-                        icon: 'pi pi-fw pi-tag',
-                        command: () => router.push('/export-expense-invoice')
-                    },
-                    {
-                        label: 'Картотека отгрузок на экспорт',
-                        icon: 'pi pi-fw pi-truck',
-                        command: () => router.push('/export-shipments-archive')
-                    },
-                    {
-                        label: 'Склад',
-                        icon: 'pi pi-fw pi-warehouse',
-                        command: () => router.push('/warehouse')
-                    },
-                    {
-                        label: 'Прием зерна',
-                        icon: 'pi pi-fw pi-upload',
-                        command: () => router.push('/grain-reception')
-                    }
                 ]" class="flex-1 overflow-auto" />
             </aside>
             <main class="layout-main flex-1 overflow-auto p-4">

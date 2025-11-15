@@ -15,11 +15,6 @@ api.interceptors.request.use((config) => {
 })
 
 export default {
-  // Получить список доступных процессов (видов документов)
-  getProcesses() {
-    return api.get('/processes')
-  },
-
   // Получить процесс + шаблон + шаги маршрута
   getProcessDetails(processId) {
     return api.get(`/process/${processId}`)

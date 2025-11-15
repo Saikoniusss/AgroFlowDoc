@@ -40,6 +40,7 @@ const password = ref('');
 const onSubmit = async () => {
   await auth.login(username.value, password.value);
   if (auth.user) {
+    console.log(auth.user)
     router.push('/documents');
   }
 };

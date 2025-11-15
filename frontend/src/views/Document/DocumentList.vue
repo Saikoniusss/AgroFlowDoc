@@ -21,7 +21,7 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
 import { useRouter, useRoute } from "vue-router"
-import documentApi from '@/api/documentApi'
+import http from '../../api/http'
 
 const route = useRoute()
 const router = useRouter()
@@ -31,7 +31,7 @@ const loading = ref(false)
 const load = async () => {
   loading.value = true
   try {
-    const { data } = await documentApi.getProcesses()
+    const { data } = http.get('/v1/documents/processes')
     processes.value = data
   } finally {
     loading.value = false

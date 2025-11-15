@@ -3,7 +3,7 @@
     <h2>⚙️ Процессы согласования</h2>
 
     <div class="actions">
-      <Button label="Создать процесс" icon="pi pi-plus" @click="showCreateDialog = true" />
+      <Button label="Создать процесс" icon="pi pi-plus" @click="showCreateDialog = true"></Button>
     </div>
 
     <DataTable :value="processes" class="p-datatable-sm" :loading="loading">
@@ -13,44 +13,28 @@
     </DataTable>
 
     <Dialog v-model:visible="showCreateDialog" header="Создать процесс" modal>
-      <div class="p-fluid">
-        <div class="p-field">
-          <label>Название</label>
-          <InputText v-model="newProcess.name" />
-        </div>
-        <div class="p-field">
-          <label>Код</label>
-          <InputText v-model="newProcess.code" />
-        </div>
-        <div class="p-field">
-          <label>Описание</label>
-          <Textarea v-model="newProcess.description" rows="2" />
-        </div>
-        <div class="p-field">
-          <label>Шаблон документа</label>
-          <Dropdown
-            v-model="newProcess.documentTemplateId"
-            :options="templates"
-            optionLabel="name"
-            optionValue="id"
-            placeholder="Выберите шаблон"
-          />
-        </div>
-        <div class="p-field">
-          <label>Маршрут согласования</label>
-          <Dropdown
-            v-model="newProcess.workflowRouteId"
-            :options="routes"
-            optionLabel="name"
-            optionValue="id"
-            placeholder="Выберите маршрут"
-          />
-        </div>
+      <div class="flex flex-col gap-3 mb-3">
+        <label for="name" style="min-width: 160px">Название</label>
+        <InputText id="name" v-model="newProcess.name" aria-describedby="name-help" fluid/>
       </div>
-      <template #footer>
-        <Button label="Отмена" text @click="showCreateDialog = false" />
-        <Button label="Создать" icon="pi pi-check" @click="createProcess" />
-      </template>
+      <div class="flex flex-col gap-3 mb-3">
+        <label for="code" style="min-width: 160px">Код</label>
+        <InputText id="code" v-model="newProcess.code" aria-describedby="code-help" fluid/>
+      </div>
+      <div class="flex flex-col gap-3 mb-3">
+        <label for="description" style="min-width: 160px">Описание</label>
+        <Textarea id="description" v-model="newProcess.description" aria-describedby="description-help" fluid />
+      </div>
+      <div class="flex flex-col gap-3 mb-3">
+        <label for="templates" style="min-width: 160px">Шаблон документа</label>
+        <Dropdown v-model="newProcess.documentTemplateId" :options="templates" optionLabel="name" optionValue="id" placeholder="Выберите шаблон" fluid/>
+      </div>
+      <div class="flex flex-col gap-3 mb-3">
+        <label for="routes" style="min-width: 160px">Маршрут согласования</label>
+        <Dropdown v-model="newProcess.workflowRouteId" :options="routes" optionLabel="name" optionValue="id" placeholder="Выберите шаблон" fluid/>
+      </div>
+      <Button @click="createProcess" size="small" severity="success" variant="text">Создать</Button>
+      <Button @click="showCreateDialog = false" size="small" severity="secondary" variant="text">Отмена</Button>
     </Dialog>
   </div>
 </template>
@@ -65,7 +49,7 @@ import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Dropdown from 'primevue/dropdown'
 import { useToast } from 'primevue/usetoast'
-import adminWorkflowApi from '@/api/adminWorkflowApi'
+import http from '../../api/http'
 
 const toast = useToast()
 const loading = ref(false)
@@ -86,9 +70,9 @@ const loadAll = async () => {
   loading.value = true
   try {
     const [p, t, r] = await Promise.all([
-      adminWorkflowApi.getProcesses(),
-      adminWorkflowApi.getTemplates(),
-      adminWorkflowApi.getRoutes()
+      http.get('/v1/admin/workflow/processes'),
+      http.get('/v1/admin/workflow/templates'),
+      http.get('/v1/admin/workflow/routes')
     ])
     processes.value = p.data
     templates.value = t.data
@@ -100,7 +84,7 @@ const loadAll = async () => {
 
 const createProcess = async () => {
   try {
-    await adminWorkflowApi.createProcess(newProcess.value)
+    await http.post('/v1/admin/workflow/processes', newProcess.value)
     toast.add({ severity: 'success', summary: 'Процесс создан' })
     showCreateDialog.value = false
     await loadAll()

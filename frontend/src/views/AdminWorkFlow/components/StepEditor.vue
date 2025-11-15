@@ -1,21 +1,17 @@
 <template>
   <div class="p-fluid">
-    <div class="p-field">
-      <label>Название этапа</label>
-      <InputText v-model="stepLocal.stepName" />
+    <div class="flex flex-col gap-3 mb-3">
+      <label for="name" style="min-width: 160px">Название этапа</label>
+      <InputText id="name" v-model="stepLocal.stepName" aria-describedby="name-help" fluid/>
     </div>
-
-    <div class="p-formgrid grid">
-      <div class="field col">
-        <label>Порядок</label>
-        <InputNumber v-model="stepLocal.stepOrder" :min="1" />
-      </div>
-      <div class="field col">
-        <label>Мин. утверждений</label>
-        <InputNumber v-model="stepLocal.minApprovals" :min="1" />
-      </div>
+    <div class="flex flex-col gap-3 mb-3">
+      <label for="stepOrder" style="min-width: 160px">Порядок</label>
+      <InputNumber v-model="stepLocal.stepOrder" :min="1" aria-describedby="stepOrder-help" fluid/>
     </div>
-
+    <div class="flex flex-col gap-3 mb-3">
+      <label for="minApprovals" style="min-width: 160px">Мин. утверждений</label>
+      <InputNumber v-model="stepLocal.minApprovals" :min="1" aria-describedby="minApprovals-help" fluid/>
+    </div>
     <div class="p-field-checkbox">
       <Checkbox v-model="stepLocal.isParallel" binary />
       <label class="ml-2">Параллельное согласование</label>
@@ -65,7 +61,7 @@ import Divider from 'primevue/divider'
 import TabView from 'primevue/tabview'
 import TabPanel from 'primevue/tabpanel'
 import Button from 'primevue/button'
-import adminWorkflowApi from '@/api/adminWorkflowApi'
+import http from '../../../api/http'
 
 const props = defineProps({
   step: Object,
@@ -94,8 +90,8 @@ watch(
 
 const loadUsersAndRoles = async () => {
   const [u, r] = await Promise.all([
-    adminWorkflowApi.getUsers(),
-    adminWorkflowApi.getRoles()
+    http.get('/admin/users'),
+    http.get('/admin/roles'),
   ])
   users.value = u.data
   roles.value = r.data

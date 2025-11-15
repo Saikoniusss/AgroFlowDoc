@@ -54,24 +54,20 @@
 
     <!-- Диалог создания маршрута -->
     <Dialog v-model:visible="showCreateDialog" header="Создать маршрут" modal :style="{ width: '450px' }">
-      <div class="p-fluid">
-        <div class="field">
-          <label>Название</label>
-          <InputText v-model="newRoute.name" />
-        </div>
-        <div class="field">
-          <label>Код</label>
-          <InputText v-model="newRoute.code" />
-        </div>
-        <div class="field">
-          <label>Описание</label>
-          <Textarea v-model="newRoute.description" rows="3" />
-        </div>
+      <div class="flex flex-col gap-3 mb-3">
+        <label for="name" style="min-width: 80px">Название</label>
+        <InputText id="name" v-model="newRoute.name" aria-describedby="name-help" fluid/>
       </div>
-      <template #footer>
-        <Button label="Отмена" text @click="showCreateDialog = false" />
-        <Button label="Создать" icon="pi pi-check" @click="createRoute" />
-      </template>
+      <div class="flex flex-col gap-3 mb-3">
+        <label for="code" style="min-width: 80px">Код</label>
+        <InputText id="code" v-model="newRoute.code" aria-describedby="code-help" fluid/>
+      </div>
+      <div class="flex flex-col gap-3 mb-3">
+        <label for="description" style="min-width: 80px">Описание</label>
+        <InputText id="description" v-model="newRoute.description" aria-describedby="description-help" fluid />
+      </div>
+      <Button @click="createRoute" size="small" severity="success" variant="text">Создать</Button>
+      <Button @click="showCreateDialog = false" size="small" severity="secondary" variant="text">Отмена</Button>
     </Dialog>
 
     <!-- Диалоги для шагов -->
@@ -107,6 +103,7 @@ import { useToast } from 'primevue/usetoast'
 import draggable from 'vuedraggable'
 import StepEditor from './components/StepEditor.vue'
 import adminWorkflowApi from '@/api/adminWorkflowApi'
+import http from '../../api/http'
 
 const toast = useToast()
 const routes = ref([])
@@ -124,7 +121,7 @@ const editingStep = ref({})
 const loadRoutes = async () => {
   loading.value = true
   try {
-    const { data } = await adminWorkflowApi.getRoutes()
+    const { data } = await http.get('/v1/admin/workflow/routes')
     routes.value = data
   } finally {
     loading.value = false
@@ -136,7 +133,7 @@ const selectRoute = (route) => {
 }
 
 const createRoute = async () => {
-  await adminWorkflowApi.createRoute(newRoute.value)
+  await http.post('/v1/admin/workflow/routes', newRoute.value)
   toast.add({ severity: 'success', summary: 'Маршрут создан' })
   showCreateDialog.value = false
   await loadRoutes()
@@ -154,7 +151,7 @@ const openAddStep = (route) => {
 }
 
 const createStep = async (payload) => {
-  await adminWorkflowApi.addStep(selectedRoute.value.id, payload)
+  await http.post(`/v1/admin/workflow/routes/${selectedRoute.value.id}/steps`, payload)
   toast.add({ severity: 'success', summary: 'Этап добавлен' })
   showStepDialog.value = false
   await loadRoutes()
@@ -166,7 +163,7 @@ const openEditStep = (route, step) => {
 }
 
 const updateStep = async (payload) => {
-  await adminWorkflowApi.updateStep(selectedRoute.value.id, editingStep.value.id, payload)
+  await http.post(`/v1/admin/workflow/routes/${selectedRoute.value.id}/steps`, editingStep.value.id, payload)
   toast.add({ severity: 'success', summary: 'Этап обновлён' })
   showEditStepDialog.value = false
   await loadRoutes()
@@ -174,7 +171,7 @@ const updateStep = async (payload) => {
 
 const deleteStep = async (route, step) => {
   if (confirm(`Удалить этап "${step.stepName}"?`)) {
-    await adminWorkflowApi.deleteStep(route.id, step.id)
+    await http.delete(`/v1/admin/workflow/routes/${route.id}/steps/${step.id}`)
     toast.add({ severity: 'success', summary: 'Этап удалён' })
     await loadRoutes()
   }
@@ -187,7 +184,7 @@ const onReorder = async (route) => {
     stepOrder: s.stepOrder
   }))
   try {
-    await adminWorkflowApi.updateRouteStepOrder(route.id, payload)
+    await http.put(`/v1/admin/workflow/routes/${route.id}/steps/reorder`, payload)
     toast.add({ severity: 'success', summary: 'Порядок сохранён' })
   } catch (err) {
     console.error(err)

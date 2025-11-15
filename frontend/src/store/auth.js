@@ -17,6 +17,11 @@ export const useAuthStore = defineStore('auth', {
         localStorage.setItem('user', JSON.stringify(this.user));
         http.defaults.headers.common['Authorization'] = `Bearer ${this.token}`;
       } catch (err) {
+        this.token = null;
+        this.user = null;
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        delete http.defaults.headers.common['Authorization'];
         this.error = err.response?.data?.message || 'Ошибка входа';
       }
     },
