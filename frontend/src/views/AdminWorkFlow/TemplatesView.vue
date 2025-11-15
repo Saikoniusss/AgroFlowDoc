@@ -111,80 +111,65 @@
 
     <!-- Диалог создания шаблона -->
     <Dialog v-model:visible="showCreateDialog" header="Создать шаблон" modal>
-      <div class="p-fluid">
-        <div class="p-field">
-          <label>Название</label>
-          <InputText v-model="newTemplate.name" />
-        </div>
-        <div class="p-field">
-          <label>Код</label>
-          <InputText v-model="newTemplate.code" />
-        </div>
-        <div class="p-field">
-          <label>Описание</label>
-          <Textarea v-model="newTemplate.description" rows="3" />
-        </div>
+      <div class="flex flex-col gap-3 mb-3">
+        <label for="name" style="min-width: 80px">Название</label>
+        <InputText id="name" v-model="newTemplate.name" aria-describedby="name-help" fluid/>
       </div>
-      <template #footer>
-        <Button label="Отмена" text @click="showCreateDialog = false" />
-        <Button label="Создать" icon="pi pi-check" @click="createTemplate" />
-      </template>
+      <div class="flex flex-col gap-3 mb-3">
+        <label for="code" style="min-width: 80px">Код</label>
+        <InputText id="code" v-model="newTemplate.code" aria-describedby="code-help" fluid/>
+      </div>
+      <div class="flex flex-col gap-3 mb-3">
+        <label for="description" style="min-width: 80px">Описание</label>
+        <InputText id="description" v-model="newTemplate.description" aria-describedby="description-help" fluid />
+      </div>
+      <Button @click="createTemplate" size="small" severity="success" variant="text">Создать</Button>
+      <Button @click="showCreateDialog = false" size="small" severity="secondary" variant="text">Отмена</Button>
     </Dialog>
 
     <!-- Диалог редактирования шаблона -->
     <Dialog v-model:visible="showEditTemplateDialog" header="Редактировать шаблон" modal>
-      <div class="p-fluid">
-        <div class="p-field">
-          <label>Название</label>
-          <InputText v-model="editingTemplate.name" />
-        </div>
-        <div class="p-field">
-          <label>Код</label>
-          <InputText v-model="editingTemplate.code" />
-        </div>
-        <div class="p-field">
-          <label>Описание</label>
-          <Textarea v-model="editingTemplate.description" rows="3" />
-        </div>
+      <div class="flex flex-col gap-3 mb-3">
+        <label for="name" style="min-width: 80px">Название</label>
+        <InputText id="name" v-model="editingTemplate.name" aria-describedby="name-help" fluid/>
       </div>
-      <template #footer>
-        <Button label="Отмена" text @click="showEditTemplateDialog = false" />
-        <Button label="Сохранить" icon="pi pi-check" @click="saveTemplate" />
-      </template>
+      <div class="flex flex-col gap-3 mb-3">
+        <label for="code" style="min-width: 80px">Код</label>
+        <InputText id="code" v-model="editingTemplate.code" aria-describedby="code-help" fluid/>
+      </div>
+      <div class="flex flex-col gap-3 mb-3">
+        <label for="description" style="min-width: 80px">Описание</label>
+        <InputText id="description" v-model="editingTemplate.description" aria-describedby="description-help" fluid />
+      </div>
+      <Button @click="saveTemplate" size="small" severity="success" variant="text">Создать</Button>
+      <Button @click="showEditTemplateDialog = false" size="small" severity="secondary" variant="text">Отмена</Button>
     </Dialog>
 
     <!-- Диалог редактирования поля -->
     <Dialog v-model:visible="showFieldDialog" :header="fieldDialogTitle" modal :style="{ width: '600px' }">
-      <div class="p-fluid">
-        <div class="p-field">
-          <label>Имя (name)</label>
-          <InputText v-model="editingField.name" />
-        </div>
-        <div class="p-field">
-          <label>Заголовок (label)</label>
-          <InputText v-model="editingField.label" />
-        </div>
-
-        <div class="p-formgrid grid">
-          <div class="field col">
-            <label>Тип</label>
-            <Dropdown v-model="editingField.fieldType" :options="fieldTypes" optionLabel="label" optionValue="value" />
-          </div>
-          <div class="field col">
-            <label>Порядок</label>
-            <InputNumber v-model="editingField.order" :min="1" />
-          </div>
-        </div>
-
-        <div class="p-field-checkbox">
-          <Checkbox v-model="editingField.isRequired" binary />
-          <label>Обязательное</label>
-        </div>
-
-        <div v-if="editingField.fieldType === 'select'">
-          <label>Варианты (JSON)</label>
-          <Textarea v-model="editingField.optionsJson" rows="3" />
-        </div>
+      <div class="flex flex-col gap-3 mb-3">
+        <label for="name" style="min-width: 160px">Имя (name)</label>
+        <InputText id="name" v-model="editingField.name" aria-describedby="name-help" fluid/>
+      </div>
+      <div class="flex flex-col gap-3 mb-3">
+        <label for="label" style="min-width: 160px">Заголовок (label)</label>
+        <InputText id="label" v-model="editingField.label" aria-describedby="label-help" fluid/>
+      </div>
+      <div class="flex flex-col gap-3 mb-3">
+        <label for="fieldType" style="min-width: 160px">Тип</label>
+        <Dropdown v-model="editingField.fieldType" :options="fieldTypes" optionLabel="label" optionValue="value" fluid/>
+      </div>
+      <div class="flex flex-col gap-3 mb-3">
+        <label for="order" style="min-width: 160px">Порядок</label>
+        <InputNumber v-model="editingField.order" :min="1" fluid/>
+      </div>
+      <div class="flex flex-col gap-3 mb-3">
+        <label for="isRequired" style="min-width: 160px">Обязательное</label>
+        <Checkbox v-model="editingField.isRequired" binary />
+      </div>
+      <div class="flex flex-col gap-3 mb-3" v-if="editingField.fieldType === 'select'">
+        <label for="optionsJson" style="min-width: 160px">Варианты (JSON)</label>
+        <Textarea v-model="editingField.optionsJson" rows="3" />
       </div>
       <template #footer>
         <Button label="Отмена" text @click="showFieldDialog = false" />
@@ -196,20 +181,17 @@
 
 <script setup>
 import { ref, computed, onMounted, watch  } from 'vue'
-import DataTable from 'primevue/datatable'
-import Column from 'primevue/column'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import Textarea from 'primevue/textarea'
 import Dropdown from 'primevue/dropdown'
 import Checkbox from 'primevue/checkbox'
-import Divider from 'primevue/divider'
 import Dialog from 'primevue/dialog'
 import Calendar from 'primevue/calendar'
 import { useToast } from 'primevue/usetoast'
-import adminWorkflowApi from '@/api/adminWorkflowApi'
 import draggable from 'vuedraggable'
+import http from '../../api/http'
 
 const toast = useToast()
 
@@ -239,7 +221,7 @@ const fieldTypes = [
 const loadTemplates = async () => {
   loading.value = true
   try {
-    const { data } = await adminWorkflowApi.getTemplates()
+    const { data } = await http.get('/v1/admin/workflow/templates')
     templates.value = data
   } finally {
     loading.value = false
@@ -256,7 +238,7 @@ const sortedFields = computed(() =>
 )
 
 const createTemplate = async () => {
-  await adminWorkflowApi.createTemplate(newTemplate.value)
+  await http.post('/v1/admin/workflow/templates', newTemplate.value)
   toast.add({ severity: 'success', summary: 'Шаблон создан' })
   showCreateDialog.value = false
   await loadTemplates()
@@ -268,7 +250,7 @@ const openEditTemplate = (template) => {
 }
 
 const saveTemplate = async () => {
-  await adminWorkflowApi.updateTemplate(editingTemplate.value.id, editingTemplate.value)
+  await http.put('/v1/admin/workflow/templates/' + editingTemplate.value.id, editingTemplate.value)
   toast.add({ severity: 'success', summary: 'Шаблон обновлён' })
   showEditTemplateDialog.value = false
   await loadTemplates()
@@ -296,7 +278,7 @@ const editField = (f) => {
 }
 
 const deleteField = async (f) => {
-  await adminWorkflowApi.deleteField(selectedTemplate.value.id, f.id)
+  await http.delete(`/v1/admin/workflow/templates/${selectedTemplate.value.id}/fields/${f.id}`)
   toast.add({ severity: 'warn', summary: 'Поле удалено' })
   await loadTemplates()
   selectedTemplate.value = templates.value.find(x => x.id === selectedTemplate.value.id)
@@ -305,10 +287,10 @@ const deleteField = async (f) => {
 const saveField = async () => {
   const f = editingField.value
   if (f.id) {
-    await adminWorkflowApi.updateField(selectedTemplate.value.id, f.id, f)
+    await http.put(`/v1/admin/workflow/templates/${selectedTemplate.value.id}/fields/${f.id}`, f)
     toast.add({ severity: 'success', summary: 'Поле обновлено' })
   } else {
-    await adminWorkflowApi.addField(selectedTemplate.value.id, f)
+    await http.post(`/v1/admin/workflow/templates/${selectedTemplate.value.id}/fields`, f)
     toast.add({ severity: 'success', summary: 'Поле добавлено' })
   }
   showFieldDialog.value = false
@@ -340,7 +322,7 @@ const saveFieldOrder = async () => {
   // перенумеровываем
   localFields.value.forEach((f, idx) => (f.order = idx + 1))
   try {
-    await adminWorkflowApi.updateFieldOrder(selectedTemplate.value.id, localFields.value)
+    await http.put(`/v1/admin/workflow/templates/${selectedTemplate.value.id}/fields/reorder`, localFields.value)
     toast.add({ severity: 'success', summary: 'Порядок обновлён' })
     // обновляем в основном объекте
     selectedTemplate.value.fields = [...localFields.value]
