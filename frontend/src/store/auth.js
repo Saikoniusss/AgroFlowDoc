@@ -61,6 +61,7 @@ export const useAuthStore = defineStore('auth', {
       this.user = null;
       localStorage.removeItem('token');
       delete http.defaults.headers.common['Authorization'];
+      window.location.href = "/login"
     },
   },
 });

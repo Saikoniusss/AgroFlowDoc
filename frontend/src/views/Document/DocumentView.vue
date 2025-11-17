@@ -1,6 +1,6 @@
 <template>
-  <div class="page">
-    <h2>{{ document?.title }}</h2>
+  <div class="page" v-if="document">
+    <h2>{{ document.title }}</h2>
 
     <div class="card p-3 mt-3">
 
@@ -39,13 +39,14 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import documentApi from '@/api/documentApi'
+import http from '@/api/http';
 
 const route = useRoute()
 const router = useRouter()
 const document = ref(null)
 
 onMounted(async () => {
-  const { data } = await documentApi.getDocument(route.params.id)
+  const { data } = await http.get(`/v1/documents/${route.params.id}`)
   data.fieldsJson = JSON.parse(data.fieldsJson || "{}")
   document.value = data
 })
