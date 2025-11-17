@@ -4,7 +4,7 @@ import routerPage from '../routers/index';
 import { useAuthStore } from '@/store/auth';
 import { ref, computed, onMounted  } from 'vue';
 import { useRouter } from 'vue-router';
-import documentApi from '@/api/documentApi'
+import http from '../api/http';
 
 const router = useRouter();
 const auth = useAuthStore();
@@ -27,7 +27,6 @@ const menuItems = ref([
         icon: 'pi pi-sign-out',
         command: async () => {
             await auth.logout();
-            routerPage.push('/login');
         },
     },
 ]);
@@ -40,7 +39,7 @@ const toggleMenu = (event) => {
 const slideMenu = ref([]);
 onMounted(async () => {
     try {
-        const { data } = await documentApi.getMenuCounts();
+        const { data } = await http.get('/v1/documents/menu-counts')
 
         slideMenu.value = [
             {
@@ -117,7 +116,7 @@ onMounted(async () => {
                 },
         ]">
             <template #start>
-                <span class="layout-logo text-xl font-bold ml-2 mr-2">AgroFlow!</span>
+                <span @click="router.push('/documents')" class="layout-logo text-xl font-bold ml-2 mr-2 cursor-pointer">AgroFlow</span>
             </template>
             <template #end>
                 <div class="flex items-center gap-2 cursor-pointer" @click="toggleMenu">

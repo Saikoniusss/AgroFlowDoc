@@ -41,7 +41,7 @@ const onSubmit = async () => {
   await auth.login(username.value, password.value);
   if (auth.user) {
     console.log(auth.user)
-    router.push('/documents');
+    window.location.href = "/documents"
   }
 };
 </script>

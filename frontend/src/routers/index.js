@@ -104,15 +104,15 @@ const router = createRouter({
                     path: '/documents',
                     children: [
                         {
-                        path: '',
-                        name: 'documents',
-                        component: () => import('../views/Document/DocumentList.vue')
+                            path: '',
+                            name: 'documents',
+                            component: () => import('../views/Document/DocumentList.vue')
                         },
                         {
-                        path: 'create/:processId',
-                        name: 'document-create',
-                        component: () => import('../views/Document/DocumentCreate.vue'),
-                        props: true
+                            path: 'create/:processId',
+                            name: 'document-create',
+                            component: () => import('../views/Document/DocumentCreate.vue'),
+                            props: true
                         },
                         {
                             path: 'view/:id',

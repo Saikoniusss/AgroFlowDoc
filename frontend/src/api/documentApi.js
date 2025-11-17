@@ -62,13 +62,4 @@ export default {
   getMenuCounts() {
     return api.get('/menu-counts')
   },
-  getMyDocuments() {
-    return api.get('/my')
-  },
-  getTodoDocuments() {
-    return api.get('/todo')
-  },
-  getArchive() {
-    return api.get('/archive')
-  }
 }

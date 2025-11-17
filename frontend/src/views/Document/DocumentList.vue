@@ -23,7 +23,6 @@ import Button from 'primevue/button'
 import { useRouter, useRoute } from "vue-router"
 import http from '../../api/http'
 
-const route = useRoute()
 const router = useRouter()
 const processes = ref([])
 const loading = ref(false)
