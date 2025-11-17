@@ -12,10 +12,12 @@ namespace Infrastructure.Services;
 
 public class TelegramBotService : BackgroundService
 {
+    private static bool _started = false; // <--- защита от двойного запуска
     private readonly ILogger<TelegramBotService> _logger;
     private readonly IConfiguration _config;
     private readonly IServiceScopeFactory _scopeFactory;
     private TelegramBotClient? _bot;
+    private readonly object _lock = new();
 
     public TelegramBotService(ILogger<TelegramBotService> logger, IConfiguration config, IServiceScopeFactory scopeFactory)
     {
@@ -26,6 +28,17 @@ public class TelegramBotService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+            lock (_lock)
+            {
+                if (_started)
+                {
+                    _logger.LogWarning("TelegramBotService already started — skipping duplicate run.");
+                    return;
+                }
+                _started = true;
+            }
+
+
         var token = _config["Telegram:BotToken"];
         if (string.IsNullOrEmpty(token))
         {
@@ -34,6 +47,8 @@ public class TelegramBotService : BackgroundService
         }
 
         _bot = new TelegramBotClient(token);
+        await _bot.DeleteWebhookAsync(true, stoppingToken); 
+        _logger.LogInformation("Webhook cleared, starting polling...");// ⚡ очистка старых апдейтов 
         var me = await _bot.GetMeAsync(stoppingToken);
         _logger.LogInformation("🤖 Telegram bot {Name} started.", me.Username);
 

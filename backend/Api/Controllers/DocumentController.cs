@@ -5,11 +5,13 @@ using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using Application.Worfkflow.DocumentDTO;
+using System.Text.Json;
 
 namespace Api.Controllers;
 
 [ApiController]
 [Route("api/v1/documents")]
+[Authorize]
 public class DocumentController : ControllerBase
 {
     private readonly DocflowDbContext _db;
@@ -153,14 +155,176 @@ public class DocumentController : ControllerBase
                     doc.CurrentStepId = tracker.Id;
             }
         }
-         await _db.SaveChangesAsync();
-    
+        await _db.SaveChangesAsync();
+
 
         return Ok(new
         {
             message = req.Submit ? "Документ отправлен на согласование" : "Черновик сохранён",
             documentId = doc.Id
         });
+    }
+    [HttpPost("{documentId}/files/upload")]
+    public async Task<IActionResult> UploadFile(Guid documentId, IFormFile file)
+    {
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+        var document = await _db.Documents.FindAsync(documentId);
+        if (document == null)
+            return NotFound();
+
+        if (file == null || file.Length == 0)
+            return BadRequest("Empty file");
+
+        // Папка хранения (лучше вынести в конфиг)
+        var basePath = Path.Combine("uploads", documentId.ToString());
+        Directory.CreateDirectory(basePath);
+
+        var filePath = Path.Combine(basePath, file.FileName);
+
+        using (var stream = System.IO.File.Create(filePath))
+            await file.CopyToAsync(stream);
+
+        var entity = new DocumentFile
+        {
+            Id = Guid.NewGuid(),
+            DocumentId = documentId,
+            FileName = file.FileName,
+            RelativePath = filePath.Replace("\\", "/"),
+            ContentType = file.ContentType,
+            UploadedById = userId,
+            UploadedAtUtc = DateTime.UtcNow
+        };
+
+        _db.DocumentFiles.Add(entity);
+        await _db.SaveChangesAsync();
+
+        return Ok(new { message = "Файл загружен", file = entity });
+    }
+    [HttpGet("my")]
+    public async Task<IActionResult> GetMyDocuments()
+    {
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+        var docs = await _db.Documents
+            .Where(d => d.CreatedById == userId)
+            .OrderByDescending(d => d.CreatedAtUtc)
+            .Select(d => new
+            {
+                d.Id,
+                d.SystemNumber,
+                d.Title,
+                d.Status,
+                d.CreatedAtUtc,
+                Process = new
+                {
+                    d.Process.Id,
+                    d.Process.Name,
+                    d.Process.Code
+                }
+            })
+            .ToListAsync();
+        return Ok(docs);
+    }
+    [HttpGet("todo")]
+    public async Task<IActionResult> GetDocumentsForApproval()
+    {
+        var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdString))
+            return Unauthorized("User not found in token");
+
+        var userId = Guid.Parse(userIdString);
+        var userRoles = User.FindAll(ClaimTypes.Role).Select(r => r.Value).ToList();
+
+        var trackers = await _db.WFTrackers
+            .Include(t => t.Document).ThenInclude(d => d.Process)
+            .Where(t => t.Status == "Pending")
+            .ToListAsync();
+
+        var available = trackers
+            .Where(t =>
+            {
+                var approvers = JsonSerializer.Deserialize<List<string>>(t.ApproversJson ?? "[]") ?? new();
+
+                bool byUser = approvers.Contains($"user:{userId}");
+                bool byRole = userRoles.Any(role => approvers.Contains($"role:{role}"));
+
+                return byUser || byRole;
+            })
+            .Select(t => t.Document)
+            .Distinct()
+            .OrderByDescending(d => d.CreatedAtUtc)
+            .ToList();
+
+        return Ok(available);
+    }
+    [HttpGet("archive")]
+    public async Task<IActionResult> GetArchive()
+    {
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+        var trackers = await _db.WFTrackers
+            .Include(t => t.Document).ThenInclude(d => d.Process)
+            .Where(t =>
+                t.ApproversJson.Contains($"user:{userId}") &&
+                t.Status != "Pending"
+            )
+            .ToListAsync();
+
+        var docs = trackers
+            .Select(t => t.Document)
+            .Distinct()
+            .OrderByDescending(d => d.CreatedAtUtc)
+            .ToList();
+
+        return Ok(docs);
+    }
+    [HttpGet("menu-counts")]
+    public async Task<IActionResult> GetMenuCounts()
+    {
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var userRoles = User.FindAll(ClaimTypes.Role).Select(r => r.Value).ToList();
+
+        var processes = await _db.Processes
+            .Include(p => p.DocumentTemplate)
+            .ToListAsync();
+
+        var results = new List<object>();
+
+        foreach (var p in processes)
+        {
+            var myCount = await _db.Documents
+                .CountAsync(d => d.ProcessId == p.Id && d.CreatedById == userId);
+
+            var todoTrackers = await _db.WFTrackers
+                .Where(t => t.Document.ProcessId == p.Id && t.Status == "Pending")
+                .ToListAsync();
+
+            var todoCount = todoTrackers.Count(t =>
+            {
+                var approvers = JsonSerializer.Deserialize<List<string>>(t.ApproversJson);
+                return approvers.Contains($"user:{userId}")
+                    || userRoles.Any(r => approvers.Contains($"role:{r}"));
+            });
+
+            var archivedCount = await _db.WFTrackers
+                .CountAsync(t =>
+                    t.Document.ProcessId == p.Id &&
+                    t.ApproversJson.Contains($"user:{userId}") &&
+                    t.Status != "Pending"
+                );
+
+            results.Add(new
+            {
+                processId = p.Id,
+                processName = p.Name,
+                my = myCount,
+                todo = todoCount,
+                archive = archivedCount
+            });
+        }
+
+        return Ok(results);
     }
 }
 

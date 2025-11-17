@@ -74,7 +74,7 @@ public class AuthController : ControllerBase
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new(ClaimTypes.Name, user.DisplayName)
+            new(ClaimTypes.Name, user.Username)
         };
 
         foreach (var role in user.UserRoles.Select(r => r.Role.Name))

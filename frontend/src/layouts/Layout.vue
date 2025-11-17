@@ -2,8 +2,9 @@
 import { Menubar, PanelMenu, Button, Menu, Avatar } from 'primevue';
 import routerPage from '../routers/index';
 import { useAuthStore } from '@/store/auth';
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted  } from 'vue';
 import { useRouter } from 'vue-router';
+import documentApi from '@/api/documentApi'
 
 const router = useRouter();
 const auth = useAuthStore();
@@ -11,7 +12,7 @@ const sidebarVisible = ref(true);
 const isMobile = computed(() => window.innerWidth <= 767);
 
 // 👇 управление меню профиля
-const menu = ref();
+const menuProfile  = ref();
 const menuItems = ref([
     {
         label: 'Редактировать профиль',
@@ -31,11 +32,47 @@ const menuItems = ref([
     },
 ]);
 const toggleMenu = (event) => {
-    if (menu.value && typeof menu.value.toggle === 'function') {
-        menu.value.toggle(event);
+    if (menuProfile.value && typeof menuProfile.value.toggle === 'function') {
+        menuProfile.value.toggle(event);
     }
 };
+// 🔥 ДИНАМИЧЕСКОЕ МЕНЮ ДОКУМЕНТОВ
+const slideMenu = ref([]);
+onMounted(async () => {
+    try {
+        const { data } = await documentApi.getMenuCounts();
 
+        slideMenu.value = [
+            {
+                label: 'Мои документы',
+                icon: 'pi pi-list-check',
+                items: data.map(p => ({
+                    label: `${p.processName} (${p.my})`,
+                    command: () => router.push(`/my?processId=${p.processId}`)
+                }))
+            },
+            {
+                label: 'На согласовании',
+                icon: 'pi pi-eye',
+                items: data.map(p => ({
+                    label: `${p.processName} (${p.todo})`,
+                    command: () => router.push(`/todo?processId=${p.processId}`)
+                }))
+            },
+            {
+                label: 'Архив',
+                icon: 'pi pi-box',
+                items: data.map(p => ({
+                    label: `${p.processName} (${p.archive})`,
+                    command: () => router.push(`/archive?processId=${p.processId}`)
+                }))
+            }
+        ];
+    }
+    catch (err) {
+        console.error('Ошибка загрузки меню', err);
+    }
+});
 </script>
 
 
@@ -92,117 +129,13 @@ const toggleMenu = (event) => {
                     />
                     <span class="font-bold m-auto">{{ auth.user?.displayName || 'Профиль' }}</span>
                 </div>
-                <Menu ref="menu" :model="menuItems" :popup="true" />
+                <Menu ref="menuProfile" :model="menuItems" :popup="true" />
             </template>
         </Menubar>
         <div class="layout-content flex flex-1">
-            <aside class="layout-sidebar surface-50 border-right-1 border-gray-200 flex flex-column":class="{ hidden: !sidebarVisible && isMobile }">
-                <PanelMenu :model="[
-                    {
-                        label: 'Мои задачи',
-                        icon: 'pi pi-list-check',
-                        items: [
-                            {
-                                label: 'Заявка',
-                                icon: 'pi pi-fw pi-home',
-                                command: () => router.push('/documents')
-                            },
-                            {
-                                label: 'Счет на оплату',
-                                icon: 'pi pi-fw pi-cog',
-                                command: () => router.push('/invoice')
-                            },
-                            {
-                                label: 'Заявка на оприходование',
-                                icon: 'pi pi-fw pi-id-card',
-                                command: () => router.push('/receipt-request')
-                            },
-                            {
-                                label: 'Завка на отпуск со склада',
-                                icon: 'pi pi-fw pi-inbox',
-                                command: () => router.push('/issue-request')
-                            },
-                        ]
-                    },
-                    {
-                        label: 'Черновики',
-                        icon: 'pi pi-bookmark',
-                        items: [
-                            {
-                                label: 'Заявка',
-                                icon: 'pi pi-fw pi-home',
-                                command: () => router.push('/documents')
-                            },
-                            {
-                                label: 'Счет на оплату',
-                                icon: 'pi pi-fw pi-cog',
-                                command: () => router.push('/invoice')
-                            },
-                            {
-                                label: 'Заявка на оприходование',
-                                icon: 'pi pi-fw pi-id-card',
-                                command: () => router.push('/receipt-request')
-                            },
-                            {
-                                label: 'Завка на отпуск со склада',
-                                icon: 'pi pi-fw pi-inbox',
-                                command: () => router.push('/issue-request')
-                            },
-                        ]
-                    },
-                    {
-                        label: 'На согласовании',
-                        icon: 'pi pi-eye',
-                        items: [
-                            {
-                                label: 'Заявка',
-                                icon: 'pi pi-fw pi-home',
-                                command: () => router.push('/documents')
-                            },
-                            {
-                                label: 'Счет на оплату',
-                                icon: 'pi pi-fw pi-cog',
-                                command: () => router.push('/invoice')
-                            },
-                            {
-                                label: 'Заявка на оприходование',
-                                icon: 'pi pi-fw pi-id-card',
-                                command: () => router.push('/receipt-request')
-                            },
-                            {
-                                label: 'Завка на отпуск со склада',
-                                icon: 'pi pi-fw pi-inbox',
-                                command: () => router.push('/issue-request')
-                            },
-                        ]
-                    },
-                    {
-                        label: 'Архив',
-                        icon: 'pi pi-box',
-                        items: [
-                            {
-                                label: 'Заявка',
-                                icon: 'pi pi-fw pi-home',
-                                command: () => router.push('/documents')
-                            },
-                            {
-                                label: 'Счет на оплату',
-                                icon: 'pi pi-fw pi-cog',
-                                command: () => router.push('/invoice')
-                            },
-                            {
-                                label: 'Заявка на оприходование',
-                                icon: 'pi pi-fw pi-id-card',
-                                command: () => router.push('/receipt-request')
-                            },
-                            {
-                                label: 'Завка на отпуск со склада',
-                                icon: 'pi pi-fw pi-inbox',
-                                command: () => router.push('/issue-request')
-                            },
-                        ]
-                    },
-                ]" class="flex-1 overflow-auto" />
+            <aside class="layout-sidebar surface-50 border-right-1 border-gray-200 flex flex-column"
+                    :class="{ hidden: !sidebarVisible && isMobile }">
+                <PanelMenu :model="slideMenu" class="flex-1 overflow-auto" />
             </aside>
             <main class="layout-main flex-1 overflow-auto p-4">
                 <router-view />

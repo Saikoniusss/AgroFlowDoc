@@ -102,7 +102,6 @@ import Textarea from 'primevue/textarea'
 import { useToast } from 'primevue/usetoast'
 import draggable from 'vuedraggable'
 import StepEditor from './components/StepEditor.vue'
-import adminWorkflowApi from '@/api/adminWorkflowApi'
 import http from '../../api/http'
 
 const toast = useToast()

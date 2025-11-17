@@ -31,7 +31,7 @@ const loading = ref(false)
 const load = async () => {
   loading.value = true
   try {
-    const { data } = http.get('/v1/documents/processes')
+    const { data } = await http.get('/v1/documents/processes')
     processes.value = data
   } finally {
     loading.value = false

@@ -1,18 +1,14 @@
 import axios from 'axios'
-import { useAuthStore } from '@/store/auth'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL + '/documents'
 })
 
-// 🔐 Добавляем токен автоматически
-api.interceptors.request.use((config) => {
-  const auth = useAuthStore()
-  if (auth.token) {
-    config.headers.Authorization = `Bearer ${auth.token}`
-  }
-  return config
-})
+const token = localStorage.getItem('token');
+if (token) {
+  api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+}
+
 
 export default {
   // Получить процесс + шаблон + шаги маршрута
@@ -55,10 +51,24 @@ export default {
     return api.post(`/${docId}/comment`, { comment })
   },
 
-  // Загрузка файлов (позже настроим BE)
-  uploadFile(docId, file) {
-    const form = new FormData()
-    form.append('file', file)
-    return api.post(`/${docId}/file`, form)
+  uploadFile(documentId, file) {
+    const formData = new FormData()
+    formData.append("file", file)
+
+    return api.post(`/documents/${documentId}/files/upload`, formData, {
+      headers: { "Content-Type": "multipart/form-data" }
+    })
+  },
+  getMenuCounts() {
+    return api.get('/menu-counts')
+  },
+  getMyDocuments() {
+    return api.get('/my')
+  },
+  getTodoDocuments() {
+    return api.get('/todo')
+  },
+  getArchive() {
+    return api.get('/archive')
   }
 }

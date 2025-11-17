@@ -72,26 +72,6 @@ const router = createRouter({
                             name: 'Issue Request',
                             component: () => import('../views/IssueRequest.vue')
                         },
-                        {
-                            path: '/export-expense-invoice',
-                            name: 'Export Expense Invoice',
-                            component: () => import('../views/ExportExpenseInvoice.vue')
-                        },
-                        {
-                            path: '/export-shipments-archive',
-                            name: 'Export Shipments Archive',
-                            component: () => import('../views/ExportShipmentsArchive.vue')
-                        },
-                        {
-                            path: '/warehouse',
-                            name: 'Warehouse',
-                            component: () => import('../views/Warehouse.vue')
-                        },
-                        {
-                            path: '/grain-reception',
-                            name: 'Grain Reception',
-                            component: () => import('../views/GrainReception.vue')
-                        }
                     ]
                 },
                 {
@@ -139,7 +119,22 @@ const router = createRouter({
                             name: 'document-view',
                             component: () => import('../views/Document/DocumentView.vue'),
                             props: true 
-                        }
+                        },
+                        {
+                            path: '/my',
+                            component: () => import('@/views/Document/DocumentListFiltered.vue'),
+                            props: true 
+                        },
+                        {
+                            path: '/todo',
+                            component: () => import('@/views/Document/DocumentListFiltered.vue'),
+                            props: true 
+                        },
+                        {
+                            path: '/archive',
+                            component: () => import('@/views/Document/DocumentListFiltered.vue'),
+                            props: true 
+                        },
                     ]
                 },
             ]
