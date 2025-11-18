@@ -117,7 +117,7 @@ const closeDialogs = () => {
     <template #content>
       <DataTable :value="roles" size="small">
         <template #header>
-          <h2 class="m-2">Роли пользователей</h2>
+          <h2 class="m-0">Роли пользователей</h2>
           <div class="role-actions" style="display: flex; gap: 0.5rem; align-items: center;">
             <InputText v-model="newRole.name" size="small" placeholder="Название" />
             <InputText v-model="newRole.description" size="small" placeholder="Описание" />
