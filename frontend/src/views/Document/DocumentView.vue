@@ -1,95 +1,97 @@
 <template>
-  <div class="page">
-
-    <!-- Заголовок документа -->
-    <div class="header-card">
-      <h2>{{ document?.title }}</h2>
-      <span class="system-number">№ {{ document?.systemNumber }}</span>
-      <Tag :value="statusMap[document?.status]" :severity="statusColor" />
-    </div>
-
-    <div class="grid mt-4">
-
-      <!-- Левая колонка -->
-      <div class="col-8">
-        
-        <!-- Блок полей -->
-        <Card class="mb-3">
-          <template #title>📝 Данные документа</template>
-
-          <div class="field-list">
-            <div v-for="(value, key) in fields" :key="key" class="field-row">
-              <strong>{{ getLabel(key) }}:</strong>
-              <span>{{ value }}</span>
+  <Card class="p-1 border-2">
+    <template #header>
+      <Card class="border-1">
+        <template #content>
+          <div class="grid">
+            <div class="w-10 grid">
+              <h3>№ {{ document?.systemNumber }}</h3>
+            </div>
+            <div class="w-2">
+              <Tag :value="statusMap[document?.status]" :severity="statusColor" />
+              <b>{{ formatDateTime(document?.createdAtUtc) }}</b>
             </div>
           </div>
-        </Card>
-
-        <!-- Файлы -->
-        <Card class="mb-3">
-          <template #title>📎 Вложения</template>
-
-          <ul v-if="document.files.length > 0">
-            <li v-for="file in document.files" :key="file.id">
-              <a :href="fileUrl(file)" target="_blank">
-                <i class="pi pi-file" style="margin-right: 6px"></i>
-                {{ file.fileName }}
-              </a>
-            </li>
-          </ul>
-
-          <div v-else class="text-muted">
-            Файлы не прикреплены
-          </div>
-        </Card>
-
-      </div>
-
-      <!-- Правая колонка -->
-      <div class="col-4">
-
-        <!-- Маршрут согласования -->
-        <Card>
-          <template #title>📌 Маршрут согласования</template>
-
-          <Timeline :value="steps">
-            <template #content="{ item }">
-              <div>
-                <b>{{ item.stepOrder }}. {{ item.stepName }}</b><br />
-                <span :class="`status ${item.status.toLowerCase()}`">
-                  {{ item.status }}
-                </span>
-              </div>
+        </template>
+      </Card>
+    </template>
+    <template #content>
+        <div class="grid">
+          <Card class="w-4 border-0">
+            <template #title>📝 Данные документа</template>
+            <template #content>
+                <div v-for="(value, key) in fields" :key="key" class="grid m-1 border-bottom-1" style="text-align: left; font-weight: 300;">
+                  <div class="w-4">
+                    <strong>{{ getLabel(key) }}:</strong>
+                  </div>
+                  <div class="w-8" v-if="isDate(value)">
+                    <span>{{ formatDateTime(value) }}</span>
+                  </div>
+                  <div class="w-8" v-else>
+                    <span>{{ value }}</span>
+                  </div>
+                </div>
             </template>
-          </Timeline>
-        </Card>
+          </Card>
+          <Card class="w-8 border-0">
+            <template #title>📌 Маршрут согласования</template>
+            <template #content>
+              <Timeline :value="steps" align="alternate" class="customized-timeline">
+                  <template #marker="slotProps">
+                      <span>
+                          {{ slotProps.item.stepOrder }}
+                      </span>
+                  </template>
+                  <template #content="slotProps">
+                      <Card class="mt-1 border-1">
+                          <template #title>
+                              {{ slotProps.item.status }}
+                          </template>
+                          <template #subtitle>
+                              {{ slotProps.item.stepName }}
+                          </template>
+                      </Card>
+                  </template>
+              </Timeline>
+            </template>
+          </Card>
+          <Card class="w-4 border-0">
+            <template #title>📎 Вложения</template>
+            <ul v-if="document.files.length > 0">
+              <li v-for="file in document.files" :key="file.id">
+                <a :href="fileUrl(file)" target="_blank">
+                  <i class="pi pi-file" style="margin-right: 6px"></i>
+                  {{ file.fileName }}
+                </a>
+              </li>
+            </ul>
 
+            <div v-else class="text-muted">
+              Файлы не прикреплены
+            </div>
+          </Card>
+        </div>
+    </template>
+    <template #footer>
+      <div class="flex gap-4 mt-1">
+        <Button
+          v-if="document?.canApprove"
+          label="Одобрить"
+          class="p-button-success w-full"
+          icon="pi pi-check"
+          @click="approve"
+        />
+
+        <Button
+          v-if="document?.canApprove"
+          label="Отклонить"
+          class="p-button-danger w-full"
+          icon="pi pi-times"
+          @click="reject"
+        />
       </div>
-
-    </div>
-
-    <!-- Кнопки -->
-    <div class="actions mt-4">
-
-      <Button
-        v-if="document?.canApprove"
-        label="Одобрить"
-        class="p-button-success"
-        icon="pi pi-check"
-        @click="approve"
-      />
-
-      <Button
-        v-if="document?.canApprove"
-        label="Отклонить"
-        class="p-button-danger ml-2"
-        icon="pi pi-times"
-        @click="reject"
-      />
-      
-    </div>
-
-  </div>
+    </template>
+  </Card>
 </template>
 
 <script setup>
@@ -101,6 +103,8 @@ import Card from 'primevue/card'
 import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import Timeline from 'primevue/timeline'
+import http from '../../api/http'
+import { DateTime } from 'luxon';
 
 const route = useRoute()
 const router = useRouter()
@@ -108,6 +112,17 @@ const document = ref(null)
 
 const fields = ref({})
 const steps = ref([])
+
+const formatDateTime = (utcString) => {
+  return DateTime.fromISO(utcString, { zone: 'utc' }) // берём UTC
+    .setZone('Asia/Yekaterinburg') // конвертируем в Екатеринбург
+    .toFormat('dd.MM.yyyy, HH:mm'); // формат 24 часа
+};
+
+const isDate = (str) => {
+  const d = new Date(str);
+  return !isNaN(d.getTime());
+}
 
 const statusMap = {
   Draft: "Черновик",
@@ -126,13 +141,11 @@ const statusColor = computed(() => {
 })
 
 onMounted(async () => {
-  const { data } = await documentApi.getDocument(route.params.id)
+  const { data } = await http.get(`/v1/documents/${route.params.id}`)
 
   document.value = data
-  console.log(document.value)
   fields.value = JSON.parse(data.fieldsJson || "{}")
-    console.log(fields.value)
-  steps.value = data.workflowTrackers
+  steps.value = data.workflow
 })
 
 const getLabel = (key) => {
@@ -157,22 +170,7 @@ const reject = async () => {
 </script>
 
 <style scoped>
-.header-card {
-  display: flex;
-  align-items: center;
-  gap: 20px;
+.p-card-body {
+  margin: 2px !important;
 }
-.system-number {
-  color: #666;
-  font-size: 14px;
-}
-.field-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 6px 0;
-  border-bottom: 1px solid #eee;
-}
-.status.pending { color: orange; }
-.status.approved { color: green; }
-.status.rejected { color: red; }
 </style>

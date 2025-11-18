@@ -21,11 +21,6 @@ export default {
     return api.post('/create', payload)
   },
 
-  // Получить документ (для просмотра)
-  getDocument(docId) {
-    return api.get(`/${docId}`)
-  },
-
   // Обновить документ (черновик)
   updateDocument(docId, payload) {
     return api.put(`/${docId}`, payload)

@@ -4,7 +4,7 @@
       <DataView :value="documents" layout="list" dataKey="id" paginator :rows="4">
         <template #list="slotProps">
             <div class="flex flex-column gap-3" style="background-color: #d7cfcf;">
-                <div v-for="item in slotProps.items" :key="item.id" class="p-3 border-1 surface-border surface-0 border-round grid text-left mr-0 ml-0">
+                <div v-for="item in slotProps.items" :key="item.id" class="p-3 surface-0 border-round grid text-left mr-0 ml-0" style="border: 1px solid black;">
                     <div class="w-1">
                         <img src="https://primefaces.org/cdn/primevue/images/avatar/amyelsner.png" alt="Document Image" class="w-6 border-round">
                     </div>
@@ -21,7 +21,6 @@
                         <div class="text-md w-8">Статус</div>
                         <div class="w-4">{{ item.status }}</div>
                         <Divider class="my-1" />
-                        <div class="text-md w-12">Контрольный срок: Нет</div>
                     </div>
                     <div class="w-3 text-right">
                       <Button icon="pi pi-angle-right" @click="open(item.id)" />
@@ -36,12 +35,9 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import DataTable from 'primevue/datatable'
-import Column from 'primevue/column'
 import Button from 'primevue/button'
 import http from '../../api/http'
 import DataView from "primevue/dataview"
-import Divider from 'primevue/divider';
 import { DateTime } from 'luxon';
 
 const route = useRoute()
