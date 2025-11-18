@@ -9,17 +9,17 @@
                         <img src="https://primefaces.org/cdn/primevue/images/avatar/amyelsner.png" alt="Document Image" class="w-6 border-round">
                     </div>
                     <div class="w-8 grid">
-                        <div class="text-xl font-bold w-8">{{ item.title }}</div>
-                        <div class="font-bold w-4">№ {{ item.systemNumber }} от {{ item.createdAtUtc }}</div>
+                        <div class="text-xl font-bold w-8">{{ item.process.name }}</div>
+                        <div class="font-bold w-4">№ {{ item.systemNumber }} от {{ formatDateTime(item.createdAtUtc) }}</div>
                         <Divider class="my-1" />
-                        <div class="text-md w-8">Отправитель</div>
-                        <div class="w-4">Иванов И.И.</div>
+                        <div class="text-md w-8">Автор</div>
+                        <div class="w-4">{{ item.createdByDisplayName}}</div>
+                        <Divider class="my-1" />
+                        <div class="text-md w-8">Описание</div>
+                        <div class="w-4">{{ item.title }}</div>
                         <Divider class="my-1" />
                         <div class="text-md w-8">Статус</div>
                         <div class="w-4">{{ item.status }}</div>
-                        <Divider class="my-1" />
-                        <div class="text-md w-8">Тип</div>
-                        <div class="w-4">{{ item.process.name }}</div>
                         <Divider class="my-1" />
                         <div class="text-md w-12">Контрольный срок: Нет</div>
                     </div>
@@ -42,6 +42,7 @@ import Button from 'primevue/button'
 import http from '../../api/http'
 import DataView from "primevue/dataview"
 import Divider from 'primevue/divider';
+import { DateTime } from 'luxon';
 
 const route = useRoute()
 const router = useRouter()
@@ -49,6 +50,12 @@ const router = useRouter()
 const documents = ref([])
 const loading = ref(false)
 const pageTitle = ref("")
+
+const formatDateTime = (utcString) => {
+  return DateTime.fromISO(utcString, { zone: 'utc' }) // берём UTC
+    .setZone('Asia/Yekaterinburg') // конвертируем в Екатеринбург
+    .toFormat('dd.MM.yyyy, HH:mm'); // формат 24 часа
+};
 
 const loadDocuments = async () => {
   loading.value = true

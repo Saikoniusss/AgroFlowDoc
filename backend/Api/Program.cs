@@ -22,7 +22,8 @@ builder.Host.UseSerilog((ctx, lc) =>
 
 // ----- Configuration -----
 var connectionString = builder.Configuration.GetConnectionString("AgroFlowConnection");
-var isEfTool = AppDomain.CurrentDomain.FriendlyName.Contains("ef");
+// ⚡ НАДЁЖНОЕ ОПРЕДЕЛЕНИЕ EF TOOLS
+bool isEfTool = builder.Configuration["DOTNET_RUNNING_IN_PROJECT_TOOL"] == "true";
 // CORS
 builder.Services.AddCors(options =>
 {
@@ -69,7 +70,8 @@ builder.Services.AddDbContext<DocflowDbContext>(opt =>
 // Регистрируем TelegramBotService как HostedService (singleton)
 if (!isEfTool)
 {
-    builder.Services.AddHostedService<TelegramBotService>();
+    builder.Services.AddSingleton<TelegramBotService>();
+    builder.Services.AddHostedService(sp => sp.GetRequiredService<TelegramBotService>());
 }
 // ----- App -----
 var app = builder.Build();

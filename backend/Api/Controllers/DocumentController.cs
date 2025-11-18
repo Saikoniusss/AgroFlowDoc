@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using Application.Worfkflow.DocumentDTO;
 using System.Text.Json;
+using Application.Worfkflow;
 
 namespace Api.Controllers;
 
@@ -124,7 +125,7 @@ public class DocumentController : ControllerBase
             CreatedById = userId,
             Title = req.Title,
             FieldsJson = req.FieldsJson,
-            Status = req.Submit ? "InProgress" : "Draft",
+            Status = req.Submit ? "Согласование" : "Черновик",
             CreatedAtUtc = DateTime.UtcNow,
             UpdatedAtUtc = DateTime.UtcNow
         };
@@ -208,20 +209,22 @@ public class DocumentController : ControllerBase
 
         var docs = await _db.Documents
             .Where(d => d.CreatedById == userId)
+            .Include(d => d.CreatedBy)
             .OrderByDescending(d => d.CreatedAtUtc)
-            .Select(d => new
+            .Select(d => new DocumentDto
             {
-                d.Id,
-                d.SystemNumber,
-                d.Title,
-                d.Status,
-                d.CreatedAtUtc,
-                Process = new
+                Id =d.Id,
+                SystemNumber = d.SystemNumber,
+                Title = d.Title,
+                Status = d.Status,
+                CreatedAtUtc = d.CreatedAtUtc,
+                Process = new Application.Worfkflow.DocumentDTO.ProcessDto
                 {
-                    d.Process.Id,
-                    d.Process.Name,
-                    d.Process.Code
-                }
+                    Id = d.Process.Id,
+                    Name = d.Process.Name,
+                    Code = d.Process.Code
+                },
+                CreatedByDisplayName = d.CreatedBy.DisplayName
             })
             .ToListAsync();
         return Ok(docs);
@@ -238,6 +241,8 @@ public class DocumentController : ControllerBase
 
         var trackers = await _db.WFTrackers
             .Include(t => t.Document).ThenInclude(d => d.Process)
+            .Include(t => t.Document)
+            .ThenInclude(d => d.CreatedBy) // <-- добавили
             .Where(t => t.Status == "Pending")
             .ToListAsync();
 
@@ -254,6 +259,21 @@ public class DocumentController : ControllerBase
             .Select(t => t.Document)
             .Distinct()
             .OrderByDescending(d => d.CreatedAtUtc)
+            .Select(d => new DocumentDto
+            {
+                Id = d.Id,
+                SystemNumber = d.SystemNumber,
+                Title = d.Title,
+                Status = d.Status,
+                CreatedAtUtc = d.CreatedAtUtc,
+                CreatedByDisplayName = d.CreatedBy.DisplayName,
+                Process = new Application.Worfkflow.DocumentDTO.ProcessDto
+                {
+                    Id = d.Process.Id,
+                    Name = d.Process.Name,
+                    Code = d.Process.Code
+                }
+            })
             .ToList();
 
         return Ok(available);
@@ -275,6 +295,21 @@ public class DocumentController : ControllerBase
             .Select(t => t.Document)
             .Distinct()
             .OrderByDescending(d => d.CreatedAtUtc)
+            .Select(d => new DocumentDto
+            {
+                Id = d.Id,
+                SystemNumber = d.SystemNumber,
+                Title = d.Title,
+                Status = d.Status,
+                CreatedAtUtc = d.CreatedAtUtc,
+                CreatedByDisplayName = d.CreatedBy.DisplayName,
+                Process = new Application.Worfkflow.DocumentDTO.ProcessDto
+                {
+                    Id = d.Process.Id,
+                    Name = d.Process.Name,
+                    Code = d.Process.Code
+                }
+            })
             .ToList();
 
         return Ok(docs);
@@ -326,6 +361,103 @@ public class DocumentController : ControllerBase
 
         return Ok(results);
     }
+
+
+    // 📄 ПРОСМОТР ДОКУМЕНТА
+    // ----------------------------------------------------------------
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> View(Guid id)
+    {
+        var doc = await _db.Documents
+            .Include(d => d.Template).ThenInclude(t => t.Fields)
+            .Include(d => d.Process)
+            .Include(d => d.Files)
+            .Include(d => d.WorkflowTrackers.OrderBy(t => t.StepOrder))
+            .FirstOrDefaultAsync(d => d.Id == id);
+
+        if (doc == null)
+            return NotFound();
+
+        // ----------------------------------------------------
+        // 🧠 Текущий пользователь из токена
+        // ----------------------------------------------------
+        Guid currentUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var roles = User.FindAll(ClaimTypes.Role).Select(r => r.Value).ToList();
+
+        // ----------------------------------------------------
+        // 🧠 Проверяем — может ли он утверждать документ
+        // ----------------------------------------------------
+        bool canApprove = false;
+
+        var currentStep = doc.WorkflowTrackers.FirstOrDefault(t => t.Id == doc.CurrentStepId);
+
+        if (currentStep != null)
+        {
+            var approvers = System.Text.Json.JsonSerializer.Deserialize<List<string>>(currentStep.ApproversJson ?? "[]");
+
+            if (approvers != null)
+            {
+                foreach (var rule in approvers)
+                {
+                    if (rule.StartsWith("user:"))
+                    {
+                        if (rule.Replace("user:", "") == currentUserId.ToString())
+                            canApprove = true;
+                    }
+                    else if (rule.StartsWith("role:"))
+                    {
+                        if (roles.Contains(rule.Replace("role:", "")))
+                            canApprove = true;
+                    }
+                }
+            }
+        }
+
+        // ----------------------------------------------------
+        // 📦 Формируем DTO
+        // ----------------------------------------------------
+        var result = new
+        {
+            doc.Id,
+            doc.SystemNumber,
+            doc.Title,
+            doc.Status,
+            doc.CreatedAtUtc,
+            doc.UpdatedAtUtc,
+
+            Process = new { doc.Process.Id, doc.Process.Name },
+
+            Template = new
+            {
+                doc.Template.Id,
+                doc.Template.Name,
+                Fields = doc.Template.Fields.OrderBy(f => f.Order)
+            },
+
+            FieldsJson = doc.FieldsJson,
+
+            Files = doc.Files.Select(f => new
+            {
+                f.Id,
+                f.FileName,
+                f.RelativePath,
+                f.ContentType
+            }),
+
+            Workflow = doc.WorkflowTrackers.Select(t => new
+            {
+                t.Id,
+                t.StepOrder,
+                t.Status,
+                t.StepName
+            }),
+
+            CanApprove = canApprove
+        };
+
+        return Ok(result);
+    }
+
 }
 
 public class CreateDocumentRequest

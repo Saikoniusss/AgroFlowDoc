@@ -25,7 +25,17 @@ public class TelegramBotService : BackgroundService
         _config = config;
         _scopeFactory = scopeFactory;
     }
+    public override Task StartAsync(CancellationToken cancellationToken)
+    {
+        if (_started)
+        {
+            _logger.LogWarning("❗ TelegramBotService duplicate StartAsync blocked.");
+            return Task.CompletedTask;
+        }
 
+        _started = true;
+        return base.StartAsync(cancellationToken);
+    }
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
             lock (_lock)
@@ -47,6 +57,7 @@ public class TelegramBotService : BackgroundService
         }
 
         _bot = new TelegramBotClient(token);
+
         await _bot.DeleteWebhookAsync(true, stoppingToken); 
         _logger.LogInformation("Webhook cleared, starting polling...");// ⚡ очистка старых апдейтов 
         var me = await _bot.GetMeAsync(stoppingToken);

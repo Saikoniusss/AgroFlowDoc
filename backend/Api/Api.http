@@ -3,4 +3,19 @@
 GET {{Api_HostAddress}}/weatherforecast/
 Accept: application/json
 
+
 ###
+# @name login
+POST  http://localhost:5097/api/auth/login
+Content-Type: application/json
+
+{
+    "UserName" : "ruslan",
+    "password" : "123456"
+}
+
+### parking ticket info shymkent
+@token = {{login.response.body.access_token}}
+GET http://localhost:5097/api/v1/documents/58f07e02-0cd3-4e65-acc5-609182a7e540
+Content-Type: application/json
+Authorization: Bearer {{token}}

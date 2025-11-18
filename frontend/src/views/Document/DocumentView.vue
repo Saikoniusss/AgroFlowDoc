@@ -1,55 +1,147 @@
 <template>
-  <div class="page" v-if="document">
-    <h2>{{ document.title }}</h2>
+  <div class="page">
 
-    <div class="card p-3 mt-3">
+    <!-- Заголовок документа -->
+    <div class="header-card">
+      <h2>{{ document?.title }}</h2>
+      <span class="system-number">№ {{ document?.systemNumber }}</span>
+      <Tag :value="statusMap[document?.status]" :severity="statusColor" />
+    </div>
 
-      <h3>Поля документа</h3>
-      <div class="fields">
-        <div v-for="(val, key) in document.fieldsJson" :key="key" class="field-item">
-          <strong>{{ key }}</strong>: {{ val }}
-        </div>
+    <div class="grid mt-4">
+
+      <!-- Левая колонка -->
+      <div class="col-8">
+        
+        <!-- Блок полей -->
+        <Card class="mb-3">
+          <template #title>📝 Данные документа</template>
+
+          <div class="field-list">
+            <div v-for="(value, key) in fields" :key="key" class="field-row">
+              <strong>{{ getLabel(key) }}:</strong>
+              <span>{{ value }}</span>
+            </div>
+          </div>
+        </Card>
+
+        <!-- Файлы -->
+        <Card class="mb-3">
+          <template #title>📎 Вложения</template>
+
+          <ul v-if="document.files.length > 0">
+            <li v-for="file in document.files" :key="file.id">
+              <a :href="fileUrl(file)" target="_blank">
+                <i class="pi pi-file" style="margin-right: 6px"></i>
+                {{ file.fileName }}
+              </a>
+            </li>
+          </ul>
+
+          <div v-else class="text-muted">
+            Файлы не прикреплены
+          </div>
+        </Card>
+
       </div>
 
-      <h3 class="mt-4">Маршрут согласования</h3>
-      <ul>
-        <li v-for="step in document.workflowTrackers" :key="step.id">
-          {{ step.stepOrder }}. {{ step.stepName }} — 
-          <strong :class="step.status.toLowerCase()">{{ step.status }}</strong>
-        </li>
-      </ul>
+      <!-- Правая колонка -->
+      <div class="col-4">
 
-      <h3 class="mt-4">Файлы</h3>
-      <ul>
-        <li v-for="f in document.files" :key="f.id">
-          <a :href="`http://localhost:5097/${f.relativePath}`" target="_blank">{{ f.fileName }}</a>
-        </li>
-      </ul>
+        <!-- Маршрут согласования -->
+        <Card>
+          <template #title>📌 Маршрут согласования</template>
 
-      <div class="actions mt-4">
-        <Button label="Одобрить" class="p-button-success" @click="approve" />
-        <Button label="Отклонить" class="p-button-danger ml-2" @click="reject" />
+          <Timeline :value="steps">
+            <template #content="{ item }">
+              <div>
+                <b>{{ item.stepOrder }}. {{ item.stepName }}</b><br />
+                <span :class="`status ${item.status.toLowerCase()}`">
+                  {{ item.status }}
+                </span>
+              </div>
+            </template>
+          </Timeline>
+        </Card>
+
       </div>
 
     </div>
+
+    <!-- Кнопки -->
+    <div class="actions mt-4">
+
+      <Button
+        v-if="document?.canApprove"
+        label="Одобрить"
+        class="p-button-success"
+        icon="pi pi-check"
+        @click="approve"
+      />
+
+      <Button
+        v-if="document?.canApprove"
+        label="Отклонить"
+        class="p-button-danger ml-2"
+        icon="pi pi-times"
+        @click="reject"
+      />
+      
+    </div>
+
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import documentApi from '@/api/documentApi'
-import http from '@/api/http';
+
+import Card from 'primevue/card'
+import Tag from 'primevue/tag'
+import Button from 'primevue/button'
+import Timeline from 'primevue/timeline'
 
 const route = useRoute()
 const router = useRouter()
 const document = ref(null)
 
-onMounted(async () => {
-  const { data } = await http.get(`/v1/documents/${route.params.id}`)
-  data.fieldsJson = JSON.parse(data.fieldsJson || "{}")
-  document.value = data
+const fields = ref({})
+const steps = ref([])
+
+const statusMap = {
+  Draft: "Черновик",
+  InProgress: "На согласовании",
+  Approved: "Утвержден",
+  Rejected: "Отклонён"
+}
+
+const statusColor = computed(() => {
+  switch (document.value?.status) {
+    case "Approved": return "success"
+    case "Rejected": return "danger"
+    case "InProgress": return "warning"
+    default: return "secondary"
+  }
 })
+
+onMounted(async () => {
+  const { data } = await documentApi.getDocument(route.params.id)
+
+  document.value = data
+  console.log(document.value)
+  fields.value = JSON.parse(data.fieldsJson || "{}")
+    console.log(fields.value)
+  steps.value = data.workflowTrackers
+})
+
+const getLabel = (key) => {
+  const field = document.value.template.fields.find(f => f.name === key)
+  return field?.label || key
+}
+
+const fileUrl = (f) =>
+  `${import.meta.env.VITE_API_BASE_URL}/${f.relativePath}`
 
 const approve = async () => {
   await documentApi.approve(route.params.id)
@@ -65,17 +157,22 @@ const reject = async () => {
 </script>
 
 <style scoped>
-.field-item {
-  margin-bottom: 5px;
+.header-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
 }
-
-.pending {
-  color: orange;
+.system-number {
+  color: #666;
+  font-size: 14px;
 }
-.approved {
-  color: green;
+.field-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid #eee;
 }
-.rejected {
-  color: red;
-}
+.status.pending { color: orange; }
+.status.approved { color: green; }
+.status.rejected { color: red; }
 </style>

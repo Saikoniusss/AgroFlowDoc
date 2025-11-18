@@ -53,3 +53,21 @@ public class CreateDocumentRequest
     public string Title { get; set; } = default!;
     public Dictionary<string, object?> Fields { get; set; } = new();
 }
+
+public class DocumentDto
+{
+    public Guid Id { get; set; }
+    public string SystemNumber { get; set; } = default!;
+    public string Title { get; set; } = default!;
+    public string Status { get; set; } = default!;
+    public DateTime CreatedAtUtc { get; set; }
+    public ProcessDto Process { get; set; } = default!;
+    public string CreatedByDisplayName { get; set; } = default!;
+}
+
+public class ProcessDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = default!;
+    public string Code { get; set; } = default!;
+}

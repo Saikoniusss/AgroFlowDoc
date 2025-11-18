@@ -15,7 +15,7 @@ public class Document
 
     public string Title { get; set; } = default!;
     public string FieldsJson { get; set; } = "{}";
-    public string Status { get; set; } = "Draft"; // Draft / InProgress / Approved / Rejected
+    public string Status { get; set; } = "Черновик"; // Черновик / На согласовании / Утверждено / Отклонено
 
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAtUtc { get; set; }

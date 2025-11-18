@@ -10,7 +10,7 @@ const profile = ref({});
 const message = ref('');
 
 onMounted(async () => {
-  const response =  await http.get('/Auth/me');
+  const response =  await http.get('/Profile/me');
   profile.value = response.data;
 });
 
