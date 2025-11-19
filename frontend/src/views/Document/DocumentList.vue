@@ -1,5 +1,6 @@
 <template>
-  <div class="page">
+  <Card class="p-1 border-2">
+    <template #content>
     <h2>📄 Создать новый документ</h2>
 
     <DataTable :value="processes" :loading="loading">
@@ -12,7 +13,8 @@
         </template>
       </Column>
     </DataTable>
-  </div>
+    </template>
+  </Card>
 </template>
 
 <script setup>
@@ -22,6 +24,7 @@ import Column from 'primevue/column'
 import Button from 'primevue/button'
 import { useRouter, useRoute } from "vue-router"
 import http from '../../api/http'
+import { Card } from 'primevue'
 
 const router = useRouter()
 const processes = ref([])
@@ -45,5 +48,4 @@ onMounted(load)
 </script>
 
 <style scoped>
-.page { padding: 20px; }
 </style>

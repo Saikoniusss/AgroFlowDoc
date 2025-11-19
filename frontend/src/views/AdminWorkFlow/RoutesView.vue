@@ -1,96 +1,96 @@
 <template>
-  <div class="routes-layout">
-    <!-- ЛЕВАЯ ПАНЕЛЬ -->
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <h3>Маршруты</h3>
-        <Button icon="pi pi-plus" label="Создать" @click="showCreateDialog = true" size="small" />
-      </div>
+  <Card class="p-1 border-2">
+    <template #content>
+      <div class="grid">
 
-      <ul class="route-list">
-        <li
-          v-for="route in routes"
-          :key="route.id"
-          :class="{ active: selectedRoute?.id === route.id }"
-          @click="selectRoute(route)"
-        >
-          {{ route.name }}
-        </li>
-      </ul>
-    </aside>
-
-    <!-- ПРАВАЯ ПАНЕЛЬ -->
-    <main class="main-panel">
-      <div v-if="selectedRoute" class="route-details">
-        <h2>{{ selectedRoute.name }}</h2>
-        <p class="route-code">Код: {{ selectedRoute.code }}</p>
-
-        <h3>Этапы согласования</h3>
-        <draggable v-model="selectedRoute.steps" item-key="id" @end="onReorder(selectedRoute)">
-          <template #item="{ element }">
-            <div class="step-item">
-              <div>
-                <b>{{ element.stepOrder }}.</b> {{ element.stepName }}
-                <small v-if="element.isParallel">(Параллельно)</small>
+        <div class="w-3">
+          <div class="sidebar-header">
+            <h3 class="flex justify-content-between align-items-center mb-3">Маршруты <Button icon="pi pi-plus" @click="showCreateDialog = true" size="small" /></h3>
+          </div>
+          <Listbox :options="routes" optionLabel="name" @change="selectRoute">
+            <template #optiongroup="slotProps">
+              <div class="flex items-center">
+                <div>{{ slotProps.option.label }}</div>
               </div>
-              <div class="step-actions">
-                <Button icon="pi pi-pencil" text rounded @click="openEditStep(selectedRoute, element)" />
-                <Button icon="pi pi-trash" text rounded severity="danger" @click="deleteStep(selectedRoute, element)" />
-              </div>
-            </div>
-          </template>
-        </draggable>
-
-        <div class="step-buttons">
-          <Button icon="pi pi-plus" label="Добавить этап" @click="openAddStep(selectedRoute)" />
-          <Button icon="pi pi-save" label="Сохранить порядок" severity="success" @click="onReorder(selectedRoute)" />
+            </template>
+          </Listbox>
         </div>
+
+        <div class="w-9">
+          <div v-if="selectedRoute">
+            <h2>{{ selectedRoute.name }}</h2>
+            <p class="route-code">Код: {{ selectedRoute.code }}</p>
+
+            <h3>Этапы согласования</h3>
+            <draggable v-model="selectedRoute.steps" item-key="id" @end="onReorder(selectedRoute)">
+              <template #item="{ element }">
+                <div class="border-1 rounded p-1 m-1 step-item surface-200 flex justify-content-between">
+                  <div>
+                    <b>{{ element.stepOrder }}.</b> {{ element.stepName }}
+                    <small v-if="element.isParallel">(Параллельно)</small>
+                  </div>
+                  <div class="step-actions">
+                    <Button icon="pi pi-pencil" text rounded @click="openEditStep(selectedRoute, element)" />
+                    <Button icon="pi pi-trash" text rounded severity="danger" @click="deleteStep(selectedRoute, element)" />
+                  </div>
+                </div>
+              </template>
+            </draggable>
+
+            <div>
+              <Button icon="pi pi-plus" label="Добавить этап" @click="openAddStep(selectedRoute)" />
+              <Button icon="pi pi-save" label="Сохранить порядок" severity="success" @click="onReorder(selectedRoute)" />
+            </div>
+          </div>
+
+          <div v-else class="placeholder">
+            <p>Выберите маршрут из списка слева или создайте новый.</p>
+          </div>
+        </div>
+
       </div>
 
-      <div v-else class="placeholder">
-        <p>Выберите маршрут из списка слева или создайте новый.</p>
-      </div>
-    </main>
+    </template>
+  </Card>
 
-    <!-- Диалог создания маршрута -->
-    <Dialog v-model:visible="showCreateDialog" header="Создать маршрут" modal :style="{ width: '450px' }">
-      <div class="flex flex-col gap-3 mb-3">
-        <label for="name" style="min-width: 80px">Название</label>
-        <InputText id="name" v-model="newRoute.name" aria-describedby="name-help" fluid/>
-      </div>
-      <div class="flex flex-col gap-3 mb-3">
-        <label for="code" style="min-width: 80px">Код</label>
-        <InputText id="code" v-model="newRoute.code" aria-describedby="code-help" fluid/>
-      </div>
-      <div class="flex flex-col gap-3 mb-3">
-        <label for="description" style="min-width: 80px">Описание</label>
-        <InputText id="description" v-model="newRoute.description" aria-describedby="description-help" fluid />
-      </div>
-      <Button @click="createRoute" size="small" severity="success" variant="text">Создать</Button>
-      <Button @click="showCreateDialog = false" size="small" severity="secondary" variant="text">Отмена</Button>
-    </Dialog>
+  <!-- Диалог создания маршрута -->
+  <Dialog v-model:visible="showCreateDialog" header="Создать маршрут" modal :style="{ width: '450px' }">
+    <div class="flex flex-col gap-3 mb-3">
+      <label for="name" style="min-width: 80px">Название</label>
+      <InputText id="name" v-model="newRoute.name" aria-describedby="name-help" fluid/>
+    </div>
+    <div class="flex flex-col gap-3 mb-3">
+      <label for="code" style="min-width: 80px">Код</label>
+      <InputText id="code" v-model="newRoute.code" aria-describedby="code-help" fluid/>
+    </div>
+    <div class="flex flex-col gap-3 mb-3">
+      <label for="description" style="min-width: 80px">Описание</label>
+      <Textarea id="description" v-model="newRoute.description" aria-describedby="description-help" fluid cols="50" rows="5"/>
+    </div>
+    <Button @click="createRoute" size="small" severity="success" variant="text">Создать</Button>
+    <Button @click="showCreateDialog = false" size="small" severity="secondary" variant="text">Отмена</Button>
+  </Dialog>
 
-    <!-- Диалоги для шагов -->
-    <Dialog v-model:visible="showStepDialog" header="Добавить этап" modal :style="{ width: '650px' }">
-      <StepEditor
-        :route="selectedRoute"
-        :step="newStep"
-        mode="create"
-        @save="createStep"
-        @cancel="showStepDialog = false"
-      />
-    </Dialog>
+  <!-- Диалоги для шагов -->
+  <Dialog v-model:visible="showStepDialog" header="Добавить этап" modal :style="{ width: '650px' }">
+    <StepEditor
+      :route="selectedRoute"
+      :step="newStep"
+      mode="create"
+      @save="createStep"
+      @cancel="showStepDialog = false"
+    />
+  </Dialog>
 
-    <Dialog v-model:visible="showEditStepDialog" header="Редактировать этап" modal :style="{ width: '650px' }">
-      <StepEditor
-        :route="selectedRoute"
-        :step="editingStep"
-        mode="edit"
-        @save="updateStep"
-        @cancel="showEditStepDialog = false"
-      />
-    </Dialog>
-  </div>
+  <Dialog v-model:visible="showEditStepDialog" header="Редактировать этап" modal :style="{ width: '650px' }">
+    <StepEditor
+      :route="selectedRoute"
+      :step="editingStep"
+      mode="edit"
+      @save="updateStep"
+      @cancel="showEditStepDialog = false"
+    />
+  </Dialog>
 </template>
 
 <script setup>
@@ -99,6 +99,8 @@ import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
+import Listbox from 'primevue/listbox';
+import { Card } from 'primevue'
 import { useToast } from 'primevue/usetoast'
 import draggable from 'vuedraggable'
 import StepEditor from './components/StepEditor.vue'
@@ -128,7 +130,7 @@ const loadRoutes = async () => {
 }
 
 const selectRoute = (route) => {
-  selectedRoute.value = route
+  selectedRoute.value = route.value
 }
 
 const createRoute = async () => {
@@ -195,78 +197,4 @@ onMounted(loadRoutes)
 </script>
 
 <style scoped>
-.routes-layout {
-  display: flex;
-  height: calc(100vh - 100px);
-}
-
-.sidebar {
-  width: 280px;
-  border-right: 1px solid #dcdcdc;
-  background: #fafafa;
-  padding: 1rem;
-  overflow-y: auto;
-}
-
-.sidebar-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.route-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.route-list li {
-  padding: 8px 10px;
-  margin-bottom: 4px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.route-list li:hover {
-  background: #eef6ff;
-}
-
-.route-list li.active {
-  background: #42b883;
-  color: white;
-}
-
-.main-panel {
-  flex: 1;
-  padding: 1.5rem;
-  overflow-y: auto;
-}
-
-.step-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 6px 10px;
-  margin-bottom: 4px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background: #fff;
-  cursor: grab;
-}
-
-.step-buttons {
-  margin-top: 1rem;
-  display: flex;
-  gap: 1rem;
-}
-
-.placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: gray;
-  height: 100%;
-}
 </style>

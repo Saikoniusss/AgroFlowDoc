@@ -11,16 +11,6 @@ if (token) {
 
 
 export default {
-  // Получить процесс + шаблон + шаги маршрута
-  getProcessDetails(processId) {
-    return api.get(`/process/${processId}`)
-  },
-
-  // Создать документ
-  createDocument(payload) {
-    return api.post('/create', payload)
-  },
-
   // Обновить документ (черновик)
   updateDocument(docId, payload) {
     return api.put(`/${docId}`, payload)
