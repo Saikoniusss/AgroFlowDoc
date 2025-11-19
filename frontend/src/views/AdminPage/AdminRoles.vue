@@ -113,7 +113,7 @@ const closeDialogs = () => {
 </script>
 
 <template>
-  <Card>
+  <Card class="p-1 border-2">
     <template #content>
       <DataTable :value="roles" size="small">
         <template #header>

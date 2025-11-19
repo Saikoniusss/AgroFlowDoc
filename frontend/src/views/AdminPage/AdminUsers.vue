@@ -72,7 +72,7 @@ const assignRole = async () => {
 </script>
 
 <template>
-  <Card>
+  <Card class="p-1 border-2">
     <template #content>
       <DataTable :value="users" v-model:filters="filters" ilterDisplay="row" size="small" paginator :rows="5" :globalFilterFields="['displayName', 'username', 'email']">
         <template #header>

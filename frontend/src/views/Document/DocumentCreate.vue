@@ -1,5 +1,6 @@
 <template>
-  <div class="page">
+  <Card class="p-1 border-2">
+    <template #content>
     <h2>Создание документа</h2>
 
     <div class="card">
@@ -41,7 +42,9 @@
         <Button label="Утвердить" class="p-button-success" @click="submit" />
       </div>
     </div>
-  </div>
+
+    </template>
+  </Card>
 </template>
 
 <script setup>
@@ -49,6 +52,8 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import documentApi from '@/api/documentApi'
+import http from '../../api/http'
+import { Card } from 'primevue'
 
 const route = useRoute()
 const router = useRouter()
@@ -63,7 +68,7 @@ const selectedFiles = ref([])
 
 onMounted(async () => {
   const id = route.params.processId
-  const { data } = await documentApi.getProcessDetails(id)
+  const { data } = await http.get(`/v1/documents/process/${id}`)
   template.value = data
   fields.value =  data.template.fields
 
@@ -79,7 +84,7 @@ const uploadAllFiles = async (documentId) => {
 }
 
 const saveDraft = async () => {
-  await documentApi.createDocument({
+  await http.post('/v1/documents/create', {
     processId: route.params.processId,
     title: title.value,
     fieldsJson: JSON.stringify(model.value),
@@ -91,7 +96,7 @@ const saveDraft = async () => {
 }
 
 const submit = async () => {
-  await documentApi.createDocument({
+  await http.post('/v1/documents/create', {
     processId: route.params.processId,
     title: title.value,
     fieldsJson: JSON.stringify(model.value),

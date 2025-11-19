@@ -1,6 +1,9 @@
 <template>
-  <div class="page">
-    <h2>{{ pageTitle }}</h2>
+  <Card class="p-1 border-2">
+    <template #header>
+      <h2>{{ pageTitle }}</h2>
+    </template>
+    <template #content>
       <DataView :value="documents" layout="list" dataKey="id" paginator :rows="4">
         <template #list="slotProps">
             <div class="flex flex-column gap-3" style="background-color: #d7cfcf;">
@@ -28,8 +31,9 @@
                 </div>
             </div>
         </template>
-    </DataView>
-  </div>
+      </DataView>
+    </template>
+  </Card>
 </template>
 
 <script setup>
@@ -39,6 +43,7 @@ import Button from 'primevue/button'
 import http from '../../api/http'
 import DataView from "primevue/dataview"
 import { DateTime } from 'luxon';
+import { Card } from 'primevue'
 
 const route = useRoute()
 const router = useRouter()

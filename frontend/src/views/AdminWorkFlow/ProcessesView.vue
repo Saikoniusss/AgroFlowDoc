@@ -1,16 +1,20 @@
 <template>
-  <div class="admin-page">
-    <h2>⚙️ Процессы согласования</h2>
+    <Card class="border-2">
+      <template #header>
+        <h2 class="mb-2">⚙️ Процессы согласования</h2>
+      </template>
+      <template #content>
+        <div class="actions">
+          <Button label="Создать процесс" icon="pi pi-plus" @click="showCreateDialog = true" text></Button>
+        </div>
 
-    <div class="actions">
-      <Button label="Создать процесс" icon="pi pi-plus" @click="showCreateDialog = true"></Button>
-    </div>
-
-    <DataTable :value="processes" class="p-datatable-sm" :loading="loading">
-      <Column field="name" header="Название" />
-      <Column field="template.name" header="Шаблон" />
-      <Column field="route.name" header="Маршрут" />
-    </DataTable>
+        <DataTable :value="processes" class="p-datatable-sm" :loading="loading">
+          <Column field="name" header="Название" />
+          <Column field="template.name" header="Шаблон" />
+          <Column field="route.name" header="Маршрут" />
+        </DataTable>
+      </template>
+    </Card>
 
     <Dialog v-model:visible="showCreateDialog" header="Создать процесс" modal>
       <div class="flex flex-col gap-3 mb-3">
@@ -23,7 +27,7 @@
       </div>
       <div class="flex flex-col gap-3 mb-3">
         <label for="description" style="min-width: 160px">Описание</label>
-        <Textarea id="description" v-model="newProcess.description" aria-describedby="description-help" fluid />
+        <Textarea id="description" v-model="newProcess.description" aria-describedby="description-help" fluid cols="50" rows="5"/>
       </div>
       <div class="flex flex-col gap-3 mb-3">
         <label for="templates" style="min-width: 160px">Шаблон документа</label>
@@ -36,7 +40,6 @@
       <Button @click="createProcess" size="small" severity="success" variant="text">Создать</Button>
       <Button @click="showCreateDialog = false" size="small" severity="secondary" variant="text">Отмена</Button>
     </Dialog>
-  </div>
 </template>
 
 <script setup>
@@ -50,6 +53,7 @@ import Textarea from 'primevue/textarea'
 import Dropdown from 'primevue/dropdown'
 import { useToast } from 'primevue/usetoast'
 import http from '../../api/http'
+import { Card } from 'primevue'
 
 const toast = useToast()
 const loading = ref(false)
