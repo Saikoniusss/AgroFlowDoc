@@ -16,6 +16,6 @@ Content-Type: application/json
 
 ### parking ticket info shymkent
 @token = {{login.response.body.access_token}}
-GET http://localhost:5097/api/v1/documents/58f07e02-0cd3-4e65-acc5-609182a7e540
+GET http://localhost:5097/api/v1/documents/037AE880-B0B9-44F1-A955-94183C803638/approve
 Content-Type: application/json
 Authorization: Bearer {{token}}

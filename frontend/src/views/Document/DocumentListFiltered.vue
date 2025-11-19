@@ -87,6 +87,10 @@ onMounted(loadDocuments)
 
 // обновляем список при смене processId
 watch(() => route.query.processId, loadDocuments)
+watch(
+  () => route.fullPath,
+  () => loadDocuments()
+)
 
 const open = (id) => {
   router.push(`/documents/view/${id}`)

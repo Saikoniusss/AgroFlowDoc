@@ -57,4 +57,11 @@ export default {
   getMenuCounts() {
     return api.get('/menu-counts')
   },
+  approve(id) {
+  return api.post(`/${id}/approve`)
+  },
+
+  reject(id, comment) {
+    return api.post(`/${id}/reject`, { comment })
+  }
 }

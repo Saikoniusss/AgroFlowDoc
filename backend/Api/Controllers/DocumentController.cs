@@ -16,9 +16,13 @@ namespace Api.Controllers;
 public class DocumentController : ControllerBase
 {
     private readonly DocflowDbContext _db;
-    public DocumentController(DocflowDbContext db) 
+    private readonly IWorkflowService _workflowService;
+    private readonly ILogger<DocumentController> _logger;
+    public DocumentController(DocflowDbContext db, IWorkflowService workflowService, ILogger<DocumentController> logger) 
     {
         _db = db; 
+        _workflowService = workflowService;
+        _logger = logger;
     }
 
      // 1. Список процессов (для списка "Создать документ")
@@ -372,6 +376,7 @@ public class DocumentController : ControllerBase
             .Include(d => d.Template).ThenInclude(t => t.Fields)
             .Include(d => d.Process)
             .Include(d => d.Files)
+            .Include(d => d.CreatedBy)
             .Include(d => d.WorkflowTrackers.OrderBy(t => t.StepOrder))
             .FirstOrDefaultAsync(d => d.Id == id);
 
@@ -424,7 +429,7 @@ public class DocumentController : ControllerBase
             doc.Status,
             doc.CreatedAtUtc,
             doc.UpdatedAtUtc,
-
+            DisplayName = doc.CreatedBy.DisplayName,
             Process = new { doc.Process.Id, doc.Process.Name },
 
             Template = new
@@ -444,13 +449,24 @@ public class DocumentController : ControllerBase
                 f.ContentType
             }),
 
-            Workflow = doc.WorkflowTrackers.Select(t => new
-            {
-                t.Id,
-                t.StepOrder,
-                t.Status,
-                t.StepName
-            }),
+            Workflow = await Task.WhenAll(
+                doc.WorkflowTrackers.OrderBy(t => t.StepOrder).Select(async t => new
+                {
+                    t.Id,
+                    t.StepOrder,
+                    t.StepName,
+                    t.IsParallel,
+                    t.MinApprovals,
+                    t.Status,
+                    Approvers = await SafeResolveApprovers(
+                        System.Text.Json.JsonSerializer.Deserialize<List<string>>(t.ApproversJson ?? "[]") ?? new()
+                    ),
+                    ApprovedBy = await SafeResolveApprovers(JsonSerializer.Deserialize<List<string>>(t.ApprovedByJson ?? "[]") ?? new()
+                    ),
+                    RejectedBy = await SafeResolveApprovers(JsonSerializer.Deserialize<List<string>>(t.RejectedByJson ?? "[]") ?? new()
+                    )
+                })
+            ),
 
             CanApprove = canApprove
         };
@@ -458,6 +474,144 @@ public class DocumentController : ControllerBase
         return Ok(result);
     }
 
+    private async Task<List<ApproverDto>> SafeResolveApprovers(List<string> input)
+    {
+        try
+        {
+            return await _workflowService.ResolveApprovers(input);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка ResolveApprovers");
+            return new List<ApproverDto>();
+        }
+    }
+
+    [HttpPost("{id:guid}/approve")]
+    public async Task<IActionResult> Approve(Guid id)
+    {
+        List<string> approvers;
+        var doc = await _db.Documents
+            .Include(d => d.Process)
+            .Include(d => d.WorkflowTrackers.OrderBy(t => t.StepOrder))
+            .FirstOrDefaultAsync(d => d.Id == id);
+
+        if (doc == null)
+            return NotFound();
+
+        Guid userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+        var current = doc.WorkflowTrackers.FirstOrDefault(t => t.Id == doc.CurrentStepId);
+        if (current == null)
+            return BadRequest("У документа нет активного этапа.");
+
+        // --- Проверка: может ли пользователь согласовать ---
+        var routeStep = await _db.WorkflowRouteSteps.FirstOrDefaultAsync(s =>
+            s.RouteId == doc.Process.WorkflowRouteId &&
+            s.StepOrder == current.StepOrder);
+
+        if (routeStep == null)
+            return BadRequest("Маршрут повреждён.");
+        
+        try
+        {
+            approvers = System.Text.Json.JsonSerializer.Deserialize<List<string>>(routeStep.ApproversJson ?? "[]")    
+            ?? new List<string>(); 
+        } catch (Exception ex)
+        {
+            return BadRequest("Ошибка ApproversJson: " + ex.Message);
+        }
+            
+        bool allowed = false;
+        foreach (var ap in approvers)
+        {
+            if (ap.StartsWith("user:"))
+            {
+                if (ap.Replace("user:", "") == userId.ToString())
+                    allowed = true;
+            }
+
+            if (ap.StartsWith("role:"))
+            {
+                var roles = User.FindAll(ClaimTypes.Role).Select(r => r.Value).ToList();
+                if (roles.Contains(ap.Replace("role:", "")))
+                    allowed = true;
+            }
+        }
+
+        if (!allowed)
+            return Forbid();
+
+        // --- Утверждаем текущий шаг ---
+        current.Status = "Approved";
+        current.CompletedAtUtc = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync();
+
+        // ========== Параллельное согласование ==========
+        var sameOrderSteps = doc.WorkflowTrackers.Where(t => t.StepOrder == current.StepOrder).ToList();
+
+        bool allApproved = sameOrderSteps.All(t => t.Status == "Approved");
+
+        if (allApproved)
+        {
+            var nextStep = doc.WorkflowTrackers
+                .Where(t => t.StepOrder > current.StepOrder)
+                .OrderBy(t => t.StepOrder)
+                .FirstOrDefault();
+
+            if (nextStep == null)
+            {
+                // 🎉 Финальный шаг → документ утверждён
+                doc.Status = "Утверждён";
+                doc.CurrentStepId = null;
+            }
+            else
+            {
+                doc.Status = "На согласовании";
+                doc.CurrentStepId = nextStep.Id;
+            }
+        }
+
+        await _db.SaveChangesAsync();
+
+        return Ok(new { message = "Документ утверждён" });
+    }
+
+    public class RejectRequest
+    {
+        public string Comment { get; set; } = default!;
+    }
+
+    [HttpPost("{id:guid}/reject")]
+    public async Task<IActionResult> Reject(Guid id, [FromBody] RejectRequest req)
+    {
+        var doc = await _db.Documents
+            .Include(d => d.WorkflowTrackers)
+            .FirstOrDefaultAsync(d => d.Id == id);
+
+        if (doc == null)
+            return NotFound();
+
+        Guid userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+        var current = doc.WorkflowTrackers.FirstOrDefault(t => t.Id == doc.CurrentStepId);
+        if (current == null)
+            return BadRequest("У документа нет активного этапа.");
+
+        // --- Отклоняем ---
+        current.Status = "Rejected";
+        current.CompletedAtUtc = DateTime.UtcNow;
+        current.ApproverComment = req.Comment;
+
+        // --- Сам документ тоже закрывается ---
+        doc.Status = "Rejected";
+        doc.CurrentStepId = null;
+
+        await _db.SaveChangesAsync();
+
+        return Ok(new { message = "Документ отклонён" });
+    }
 }
 
 public class CreateDocumentRequest

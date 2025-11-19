@@ -73,6 +73,10 @@ if (!isEfTool)
     builder.Services.AddSingleton<TelegramBotService>();
     builder.Services.AddHostedService(sp => sp.GetRequiredService<TelegramBotService>());
 }
+
+//Services
+builder.Services.AddScoped<IWorkflowService, WorkflowService>();
+
 // ----- App -----
 var app = builder.Build();
 if (app.Environment.IsDevelopment())

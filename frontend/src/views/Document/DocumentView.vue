@@ -7,52 +7,81 @@
             <div class="w-10 grid">
               <h3>№ {{ document?.systemNumber }}</h3>
             </div>
-            <div class="w-2">
-              <Tag :value="statusMap[document?.status]" :severity="statusColor" />
-              <b>{{ formatDateTime(document?.createdAtUtc) }}</b>
-            </div>
+            <div class="w-2 flex justify-content-end align-items-center gap-2">
+            <Tag :value="statusMap[document?.status]" :severity="statusColor" />
+              <span class="font-semibold">
+                {{ document?.displayName }}
+              </span>
+
+              <span class="text-sm text-color-secondary">
+                {{ formatDateTime(document?.createdAtUtc) }}
+              </span>
+          </div>
           </div>
         </template>
       </Card>
     </template>
     <template #content>
-        <div class="grid">
-          <Card class="w-4 border-0">
+        <div class="flex flex-column gap-4 w-full">
+      <!-- 📝 Данные документа -->
+          <Card class="w-full border-0">
             <template #title>📝 Данные документа</template>
             <template #content>
-                <div v-for="(value, key) in fields" :key="key" class="grid m-1 border-bottom-1" style="text-align: left; font-weight: 300;">
-                  <div class="w-4">
-                    <strong>{{ getLabel(key) }}:</strong>
-                  </div>
-                  <div class="w-8" v-if="isDate(value)">
-                    <span>{{ formatDateTime(value) }}</span>
-                  </div>
-                  <div class="w-8" v-else>
-                    <span>{{ value }}</span>
-                  </div>
+              <div
+                v-for="(value, key) in fields"
+                :key="key"
+                class="grid m-1 border-bottom-1 py-2"
+                style="text-align: left; font-weight: 300;"
+              >
+                <div class="w-4">
+                  <strong>{{ getLabel(key) }}:</strong>
                 </div>
+
+                <div class="w-8" v-if="isDateValue(value) ">
+                  <span>{{ formatDateTime(value) }}</span>
+                </div>
+                <div class="w-8" v-else>
+                  <span>{{ value }}</span>
+                </div>
+              </div>
             </template>
           </Card>
-          <Card class="w-8 border-0">
+          <Card class="w-full border-0">
             <template #title>📌 Маршрут согласования</template>
             <template #content>
-              <Timeline :value="steps" align="alternate" class="customized-timeline">
-                  <template #marker="slotProps">
-                      <span>
-                          {{ slotProps.item.stepOrder }}
-                      </span>
+              <DataTable :value="steps" class="p-datatable-sm w-full">
+
+                <Column field="stepOrder" header="№" style="width: 60px" />
+
+                <Column field="stepName" header="Этап" />
+
+                <Column header="Исполнители">
+                  <template #body="{ data }">
+                    <ul v-if="data.approvers?.length">
+                      <li v-for="ap in data.approvers" :key="ap.id">
+                        {{ ap.displayName }}
+                      </li>
+                  </ul> 
+                  <span v-else>—</span>
                   </template>
-                  <template #content="slotProps">
-                      <Card class="mt-1 border-1">
-                          <template #title>
-                              {{ slotProps.item.status }}
-                          </template>
-                          <template #subtitle>
-                              {{ slotProps.item.stepName }}
-                          </template>
-                      </Card>
+                </Column>
+
+                <Column header="Дата подписания" style="width: 180px">
+                  <template #body="{ data }">
+                    <span v-if="data.completedAtUtc">
+                      {{ formatDateTime(data.completedAtUtc) }}
+                    </span>
+                    <span v-else>—</span>
                   </template>
-              </Timeline>
+                </Column>
+
+                <Column header="Статус" style="width:120px">
+                  <template #body="{ data }">
+                    <StatusIcon :status="data.status" />
+                  </template>
+                </Column>
+
+              </DataTable>
             </template>
           </Card>
           <Card class="w-4 border-0">
@@ -105,6 +134,9 @@ import Button from 'primevue/button'
 import Timeline from 'primevue/timeline'
 import http from '../../api/http'
 import { DateTime } from 'luxon';
+import DataTable from 'primevue/datatable'
+import Column from 'primevue/column'
+import StatusIcon from '@/components/StatusIcon.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -139,7 +171,23 @@ const statusColor = computed(() => {
     default: return "secondary"
   }
 })
+function formatApprover(value) {
+  console.log(value)
+  if (value.startsWith("role:"))
+    return "Роль: " + value.replace("role:", "");
 
+  if (value.startsWith("user:"))
+    return "Пользователь: " + value.replace("user:", "");
+
+  return value;
+}
+function isDateValue(value) {
+  if (typeof value === "number") return false; // число → НЕ дата
+  if (typeof value !== "string") return false;
+
+  // ISO-подобная строка
+  return /^\d{4}-\d{2}-\d{2}/.test(value);
+}
 onMounted(async () => {
   const { data } = await http.get(`/v1/documents/${route.params.id}`)
 

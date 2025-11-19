@@ -18,4 +18,5 @@ public class WFTracker
     public string Status { get; set; } = "Pending"; // Pending / Approved / Rejected / Skipped
     public DateTime? StartedAtUtc { get; set; }
     public DateTime? CompletedAtUtc { get; set; }
+    public string? ApproverComment { get; set; }
 }
