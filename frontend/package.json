@@ -22,6 +22,7 @@
     "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
+    "@faker-js/faker": "^9.9.0",
     "@vitejs/plugin-vue": "^6.0.1",
     "cypress": "^14.5.4",
     "vite": "^7.1.7"
