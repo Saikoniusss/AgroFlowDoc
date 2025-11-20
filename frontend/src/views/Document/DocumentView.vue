@@ -84,16 +84,24 @@
               </DataTable>
             </template>
           </Card>
-          <Card class="w-4 border-0">
+          <Card class="w-12 border-0">
             <template #title>📎 Вложения</template>
-            <div> v-if="document.files">
-              <div v-for="file in document.files" :key="file.id">
-
-                  {{ file.fileName }}
-
+            <template #content>
+              <div v-if="document?.files && document?.files.length > 0">
+                <DataTable :value="document?.files" class="p-datatable-sm w-full">
+                  <Column field="fileName" header="Имя файла" />
+                  <Column header="Действия">
+                    <template #body="{ data }">
+                      <a :href="'/' + data.relativePath" target="_blank"><i class="pi pi-eye m-1 cursor-pointer"></i></a>
+                      <a :href="'/' + data.relativePath" target="_blank"><i class="pi pi-download m-1 cursor-pointer"></i></a>
+                    </template>
+                  </Column>
+                </DataTable>
               </div>
-            </div>
-
+              <div v-else>
+                <span class="text-yellow-900">Файлы не прикреплнены</span>
+              </div>
+            </template>
           </Card>
         </div>
     </template>
@@ -191,7 +199,6 @@ onMounted(async () => {
 
   document.value = data
   fields.value = JSON.parse(data.fieldsJson || "{}")
-  console.log(document.value)
   steps.value = data.workflow
 })
 
