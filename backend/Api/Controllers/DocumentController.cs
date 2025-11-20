@@ -7,6 +7,7 @@ using System.Security.Claims;
 using Application.Worfkflow.DocumentDTO;
 using System.Text.Json;
 using Application.Worfkflow;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Api.Controllers;
 
@@ -18,11 +19,13 @@ public class DocumentController : ControllerBase
     private readonly DocflowDbContext _db;
     private readonly IWorkflowService _workflowService;
     private readonly ILogger<DocumentController> _logger;
-    public DocumentController(DocflowDbContext db, IWorkflowService workflowService, ILogger<DocumentController> logger) 
+    private readonly IConfiguration _config;
+    public DocumentController(DocflowDbContext db, IWorkflowService workflowService, ILogger<DocumentController> logger, IConfiguration configuration) 
     {
         _db = db; 
         _workflowService = workflowService;
         _logger = logger;
+        _config = configuration;
     }
 
      // 1. Список процессов (для списка "Создать документ")
@@ -181,21 +184,39 @@ public class DocumentController : ControllerBase
         if (file == null || file.Length == 0)
             return BadRequest("Empty file");
 
-        // Папка хранения (лучше вынести в конфиг)
-        var basePath = Path.Combine("uploads", documentId.ToString());
-        Directory.CreateDirectory(basePath);
+        // Папка хранения (можно брать из appsettings.json)
+          // Абсолютный путь к папке
+        var uploadRoot = _config.GetValue<string>("FileStorage:BasePath")
+                     ?? Path.Combine(Directory.GetCurrentDirectory(), "DocumentUploads");
+        if (!Path.IsPathRooted(uploadRoot))
+        {
+            uploadRoot = Path.Combine(Directory.GetCurrentDirectory(), uploadRoot);
+        }
 
-        var filePath = Path.Combine(basePath, file.FileName);
+        Directory.CreateDirectory(uploadRoot);
+         // Генерируем уникальное имя файла
+        var fileGuid = Guid.NewGuid();
+        var extension = Path.GetExtension(file.FileName);
+        var savedFileName = fileGuid + extension;
 
-        using (var stream = System.IO.File.Create(filePath))
+        var filePath = Path.Combine(uploadRoot, savedFileName);
+
+        try
+        {
+            await using var stream = System.IO.File.Create(filePath);
             await file.CopyToAsync(stream);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Ошибка сохранения файла: {ex.Message}");
+        }
 
         var entity = new DocumentFile
         {
             Id = Guid.NewGuid(),
             DocumentId = documentId,
             FileName = file.FileName,
-            RelativePath = filePath.Replace("\\", "/"),
+            RelativePath = savedFileName,
             ContentType = file.ContentType,
             UploadedById = userId,
             UploadedAtUtc = DateTime.UtcNow
@@ -204,8 +225,38 @@ public class DocumentController : ControllerBase
         _db.DocumentFiles.Add(entity);
         await _db.SaveChangesAsync();
 
-        return Ok(new { message = "Файл загружен", file = entity });
+        return Ok(new 
+        {
+            success = true,
+            fileId = entity.Id,
+            savedFileName
+        });
     }
+
+    [HttpGet("files/{fileId}/download")]
+    public async Task<IActionResult> DownloadFile(Guid fileId)
+    {
+        var fileRecord = await _db.DocumentFiles.FindAsync(fileId);
+
+        if (fileRecord == null)
+            return NotFound("Файл не найден в базе");
+
+        var basePath = _config.GetValue<string>("FileStorage:BasePath")!;
+        var fullPath = Path.Combine(basePath, fileRecord.RelativePath);
+
+        if (!System.IO.File.Exists(fullPath))
+            return NotFound("Файл отсутствует на диске");
+
+        var fileBytes = await System.IO.File.ReadAllBytesAsync(fullPath);
+
+        return File(
+            fileBytes,
+            fileRecord.ContentType,
+            fileRecord.FileName,                 // 👈 отдаём оригинальное имя
+            enableRangeProcessing: true          // 👈 позволяет докачку
+        );
+    }
+
     [HttpGet("my")]
     public async Task<IActionResult> GetMyDocuments()
     {
@@ -398,29 +449,48 @@ public class DocumentController : ControllerBase
 
         if (currentStep != null)
         {
-            var approvers = System.Text.Json.JsonSerializer.Deserialize<List<string>>(currentStep.ApproversJson ?? "[]");
-
-            if (approvers != null)
+            var approversList = JsonSerializer.Deserialize<List<string>>(currentStep.ApproversJson ?? "[]") ?? new();
+            foreach (var rule in approversList)
             {
-                foreach (var rule in approvers)
-                {
-                    if (rule.StartsWith("user:"))
-                    {
-                        if (rule.Replace("user:", "") == currentUserId.ToString())
-                            canApprove = true;
-                    }
-                    else if (rule.StartsWith("role:"))
-                    {
-                        if (roles.Contains(rule.Replace("role:", "")))
-                            canApprove = true;
-                    }
-                }
+                if (rule.StartsWith("user:") && rule.Substring(5) == currentUserId.ToString())
+                    canApprove = true;
+                else if (rule.StartsWith("role:") && roles.Contains(rule.Substring(5)))
+                    canApprove = true;
             }
         }
+        var workflowDtos = new List<object>();
+        foreach (var t in doc.WorkflowTrackers.OrderBy(t => t.StepOrder))
+        {
+            // Асинхронно получаем списки исполнителей
+            var approvers = await SafeResolveApprovers(
+                JsonSerializer.Deserialize<List<string>>(t.ApproversJson ?? "[]") ?? new()
+            );
 
-        // ----------------------------------------------------
-        // 📦 Формируем DTO
-        // ----------------------------------------------------
+            var approvedBy = await SafeResolveApprovers(
+                JsonSerializer.Deserialize<List<string>>(t.ApprovedByJson ?? "[]") ?? new()
+            );
+
+            var rejectedBy = await SafeResolveApprovers(
+                JsonSerializer.Deserialize<List<string>>(t.RejectedByJson ?? "[]") ?? new()
+            );
+            workflowDtos.Add(new
+            {
+                t.Id,
+                t.StepOrder,
+                t.StepName,
+                t.IsParallel,
+                t.MinApprovals,
+                t.Status,
+                t.CompletedAtUtc,
+
+                Approvers = approvers,
+                ApprovedBy = approvedBy,
+                RejectedBy = rejectedBy,
+
+                Executors = t.CompletedAtUtc == null ? approvers : t.Status == "Rejected" ? rejectedBy : approvedBy
+            });
+        }
+
         var result = new
         {
             doc.Id,
@@ -448,26 +518,8 @@ public class DocumentController : ControllerBase
                 f.RelativePath,
                 f.ContentType
             }),
-
-            Workflow = await Task.WhenAll(
-                doc.WorkflowTrackers.OrderBy(t => t.StepOrder).Select(async t => new
-                {
-                    t.Id,
-                    t.StepOrder,
-                    t.StepName,
-                    t.IsParallel,
-                    t.MinApprovals,
-                    t.Status,
-                    Approvers = await SafeResolveApprovers(
-                        System.Text.Json.JsonSerializer.Deserialize<List<string>>(t.ApproversJson ?? "[]") ?? new()
-                    ),
-                    ApprovedBy = await SafeResolveApprovers(JsonSerializer.Deserialize<List<string>>(t.ApprovedByJson ?? "[]") ?? new()
-                    ),
-                    RejectedBy = await SafeResolveApprovers(JsonSerializer.Deserialize<List<string>>(t.RejectedByJson ?? "[]") ?? new()
-                    )
-                })
-            ),
-
+            
+            Workflow = workflowDtos,
             CanApprove = canApprove
         };
 
@@ -545,6 +597,7 @@ public class DocumentController : ControllerBase
         // --- Утверждаем текущий шаг ---
         current.Status = "Approved";
         current.CompletedAtUtc = DateTime.UtcNow;
+        current.ApprovedByJson = $"[\"user:{userId}\"]";
 
         await _db.SaveChangesAsync();
 
@@ -570,6 +623,8 @@ public class DocumentController : ControllerBase
             {
                 doc.Status = "На согласовании";
                 doc.CurrentStepId = nextStep.Id;
+                nextStep.Status = "Pending";
+                nextStep.StartedAtUtc = DateTime.UtcNow;
             }
         }
 
@@ -587,7 +642,8 @@ public class DocumentController : ControllerBase
     public async Task<IActionResult> Reject(Guid id, [FromBody] RejectRequest req)
     {
         var doc = await _db.Documents
-            .Include(d => d.WorkflowTrackers)
+            .Include(d => d.Process)
+            .Include(d => d.WorkflowTrackers.OrderBy(t => t.StepOrder))
             .FirstOrDefaultAsync(d => d.Id == id);
 
         if (doc == null)
@@ -601,6 +657,7 @@ public class DocumentController : ControllerBase
 
         // --- Отклоняем ---
         current.Status = "Rejected";
+        current.RejectedByJson = $"[\"user:{userId}\"]";
         current.CompletedAtUtc = DateTime.UtcNow;
         current.ApproverComment = req.Comment;
 

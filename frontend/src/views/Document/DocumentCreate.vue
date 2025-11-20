@@ -25,15 +25,18 @@
           />
         </div>
         <!-- ФАЙЛЫ -->
-        <h4 class="mt-4">Файлы вложения</h4>
+          <div>
+            <h4 class="mt-4">Файлы вложения</h4>
 
-        <input type="file" multiple @change="onFileSelected" />
+            <ul>
+              <li v-for="(file, index) in selectedFiles" :key="file.name" class="flex items-center gap-2">
+                📄 {{ file.name }} ({{ (file.size / 1024 / 1024).toFixed(2) }} MB)
+                <button type="button" @click="removeFile(index)">❌</button>
+              </li>
+            </ul>
 
-        <ul>
-          <li v-for="file in selectedFiles" :key="file.name">
-            📄 {{ file.name }} ({{ (file.size/1024/1024).toFixed(2) }} MB)
-          </li>
-        </ul>
+            <input type="file" multiple @change="onFileSelected" />
+          </div>
       </div>
 
       <div class="actions">
@@ -77,33 +80,68 @@ onMounted(async () => {
   })
 })
 
-const uploadAllFiles = async (documentId) => {
+// Добавление файлов
+function onFileSelected(event) {
+  const files = Array.from(event.target.files)
+  selectedFiles.value.push(...files)
+  event.target.value = null // сброс для возможности добавлять новые
+}
+
+// Удаление файла
+function removeFile(index) {
+  selectedFiles.value.splice(index, 1)
+}
+
+// Загрузка файлов на сервер
+async function uploadFiles(documentId) {
   for (const file of selectedFiles.value) {
-    await documentApi.uploadFile(documentId, file)
+    const formData = new FormData()
+    formData.append('file', file)
+    try {
+      await http.post(`/v1/documents/${documentId}/files/upload`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+    } catch (err) {
+      console.error('Ошибка загрузки файла', file.name, err)
+      toast.add({ severity: 'error', summary: 'Ошибка', detail: `Не удалось загрузить файл ${file.name}` })
+    }
   }
+  selectedFiles.value = []
 }
 
 const saveDraft = async () => {
-  await http.post('/v1/documents/create', {
+  const { data } = await http.post('/v1/documents/create', {
     processId: route.params.processId,
     title: title.value,
     fieldsJson: JSON.stringify(model.value),
     submit: false
   })
+  const documentId = data.documentId
+  if (!documentId) {
+    toast.add({ severity: 'error', summary: 'Ошибка', detail: 'Сервер не вернул ID документа' })
+    return
+  }
   if (selectedFiles.value.length > 0)
-    await uploadAllFiles(documentId)
+    await uploadFiles(documentId)
+  toast.add({ severity: 'success', summary: 'Успех', detail: 'Документ сохранен как черновик' })
   router.push('/documents')
 }
 
 const submit = async () => {
-  await http.post('/v1/documents/create', {
+  const  { data } = await http.post('/v1/documents/create', {
     processId: route.params.processId,
     title: title.value,
     fieldsJson: JSON.stringify(model.value),
     submit: true
   })
+  const documentId = data.documentId
+  if (!documentId) {
+    toast.add({ severity: 'error', summary: 'Ошибка', detail: 'Сервер не вернул ID документа' })
+    return
+  }
   if (selectedFiles.value.length > 0)
-    await uploadAllFiles(documentId)
+    await uploadFiles(documentId)
+  toast.add({ severity: 'success', summary: 'Успех', detail: 'Документ отправлен на согласование' })
   router.push('/documents')
 }
 </script>

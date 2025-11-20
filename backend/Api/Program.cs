@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Infrastructure.Services;
 using System.Security.Claims;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -84,13 +85,31 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-app.UseStaticFiles();
+var uploadRoot = builder.Configuration.GetValue<string>("FileStorage:BasePath")
+                 ?? Path.Combine(Directory.GetCurrentDirectory(), "FileStorage");
+
+// Если путь относительный → делаем абсолютным
+if (!Path.IsPathRooted(uploadRoot))
+{
+    uploadRoot = Path.Combine(Directory.GetCurrentDirectory(), uploadRoot);
+}
+
+Directory.CreateDirectory(uploadRoot);
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(uploadRoot),
+    RequestPath = "/uploads"
+});
 app.UseRouting();
 app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+
+
 
 // сидирование
 using (var scope = app.Services.CreateScope())

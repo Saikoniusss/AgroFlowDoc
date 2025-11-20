@@ -8,7 +8,7 @@
               <h3>№ {{ document?.systemNumber }}</h3>
             </div>
             <div class="w-2 flex justify-content-end align-items-center gap-2">
-            <Tag :value="statusMap[document?.status]" :severity="statusColor" />
+            <Tag :value="mappedStatus" :severity="statusColor" />
               <span class="font-semibold">
                 {{ document?.displayName }}
               </span>
@@ -57,8 +57,8 @@
 
                 <Column header="Исполнители">
                   <template #body="{ data }">
-                    <ul v-if="data.approvers?.length">
-                      <li v-for="ap in data.approvers" :key="ap.id">
+                    <ul v-if="data.executors?.length">
+                      <li v-for="ap in data.executors" :key="ap.id">
                         {{ ap.displayName }}
                       </li>
                   </ul> 
@@ -86,18 +86,14 @@
           </Card>
           <Card class="w-4 border-0">
             <template #title>📎 Вложения</template>
-            <ul v-if="document.files.length > 0">
-              <li v-for="file in document.files" :key="file.id">
-                <a :href="fileUrl(file)" target="_blank">
-                  <i class="pi pi-file" style="margin-right: 6px"></i>
-                  {{ file.fileName }}
-                </a>
-              </li>
-            </ul>
+            <div> v-if="document.files">
+              <div v-for="file in document.files" :key="file.id">
 
-            <div v-else class="text-muted">
-              Файлы не прикреплены
+                  {{ file.fileName }}
+
+              </div>
             </div>
+
           </Card>
         </div>
     </template>
@@ -157,17 +153,19 @@ const isDate = (str) => {
 }
 
 const statusMap = {
-  Draft: "Черновик",
-  InProgress: "На согласовании",
-  Approved: "Утвержден",
-  Rejected: "Отклонён"
+  Черновик: "Черновик",
+  Согласование: "Согласование",
+  Утверждён: "Утверждён",
+  Отклонён: "Отклонён"
 }
 
+const mappedStatus = computed(() => statusMap[document.value?.status] ?? document.value?.status)
+
 const statusColor = computed(() => {
-  switch (document.value?.status) {
-    case "Approved": return "success"
-    case "Rejected": return "danger"
-    case "InProgress": return "warning"
+  switch (mappedStatus.value) {
+    case "Утверждён": return "success"
+    case "Отклонён": return "danger"
+    case "Согласование": return "warning"
     default: return "secondary"
   }
 })
@@ -193,6 +191,7 @@ onMounted(async () => {
 
   document.value = data
   fields.value = JSON.parse(data.fieldsJson || "{}")
+  console.log(document.value)
   steps.value = data.workflow
 })
 
@@ -202,7 +201,7 @@ const getLabel = (key) => {
 }
 
 const fileUrl = (f) =>
-  `${import.meta.env.VITE_API_BASE_URL}/${f.relativePath}`
+  http.get(`/v1/documents/files/${f.id}/download`);
 
 const approve = async () => {
   await documentApi.approve(route.params.id)
