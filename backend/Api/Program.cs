@@ -101,6 +101,20 @@ app.UseStaticFiles(new StaticFileOptions
     FileProvider = new PhysicalFileProvider(uploadRoot),
     RequestPath = "/uploads"
 });
+
+var avatarPath = @"D:\DocumentUploads\avatars";
+
+if (!Directory.Exists(avatarPath))
+    Directory.CreateDirectory(avatarPath);
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(avatarPath),
+    RequestPath = "/avatars"
+});
+
+
+
 app.UseRouting();
 app.UseCors("AllowFrontend");
 app.UseAuthentication();

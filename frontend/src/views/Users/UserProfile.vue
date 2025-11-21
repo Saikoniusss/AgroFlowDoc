@@ -12,6 +12,7 @@ const message = ref('');
 onMounted(async () => {
   const response =  await http.get('/Profile/me');
   profile.value = response.data;
+  console.log(profile.value)
 });
 
 const updateProfile = async () => {
@@ -29,7 +30,7 @@ const onFileChange = async (event) => {
     formData.append('photo', file);
 
     try {
-      const response = await http.post('/Auth/upload-avatar', formData, {
+      const response = await http.post('/Profile/upload-avatar', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -64,6 +65,8 @@ const onFileChange = async (event) => {
             @change="onFileChange"
           />
           <Avatar
+            :image="profile.avatarPath ? http.defaults.baseURL.replace('/api', '') + '/' + profile.avatarPath
+            : null"
             :label="profile.displayName ? profile.displayName.charAt(0).toUpperCase() : ''"
             shape="circle"
             class="m-auto"

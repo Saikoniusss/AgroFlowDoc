@@ -97,7 +97,8 @@ public class AuthController : ControllerBase
                 user.Id,
                 user.DisplayName,
                 user.Username,
-                Roles = user.UserRoles.Select(r => r.Role.Name)
+                Roles = user.UserRoles.Select(r => r.Role.Name),
+                user.AvatarPath
             }
         });
     }
@@ -126,7 +127,8 @@ public class AuthController : ControllerBase
             user.DisplayName,
             user.Email,
             user.IsApproved,
-            Roles = user.UserRoles.Select(r => r.Role.Name)
+            Roles = user.UserRoles.Select(r => r.Role.Name),
+            user.AvatarPath
         });
     }
 }

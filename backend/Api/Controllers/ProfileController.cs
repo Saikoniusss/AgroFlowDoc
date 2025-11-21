@@ -12,10 +12,12 @@ namespace Api.Controllers;
 public class ProfileController : ControllerBase
 {
     private readonly DocflowDbContext _db;
+    private readonly IConfiguration _config;
 
-    public ProfileController(DocflowDbContext db)
+    public ProfileController(DocflowDbContext db, IConfiguration configuration)
     {
         _db = db;
+        _config = configuration;
     }
 
     // Получение данных профиля
@@ -37,7 +39,8 @@ public class ProfileController : ControllerBase
             user.DisplayName,
             user.Email,
             user.TelegramUsername,
-            user.TelegramChatId
+            user.TelegramChatId,
+            user.AvatarPath
         });
     }
 
@@ -54,6 +57,7 @@ public class ProfileController : ControllerBase
         user.Email = req.Email;
         user.TelegramUsername = req.TelegramUsername;
         user.UpdatedAtUtc = DateTime.UtcNow;
+        user.AvatarPath = req.AvatarPath;
 
         await _db.SaveChangesAsync();
         return Ok(new { message = "Профиль обновлён" });
@@ -73,7 +77,39 @@ public class ProfileController : ControllerBase
 
         return Ok(new { message = "Telegram-аккаунт привязан" });
     }
+    [HttpPost("upload-avatar")]
+    public async Task<IActionResult> UploadAvatar(IFormFile photo)
+    {
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var user = await _db.Users.FindAsync(userId);
+        if (user == null)
+            return Unauthorized();
+
+        if (photo == null || photo.Length == 0)
+            return BadRequest("Файл пустой");
+        
+        var basePath = _config.GetValue<string>("FileStorage:BasePath")
+                     ?? Path.Combine(Directory.GetCurrentDirectory(), "DocumentUploads");
+        var avatarFolder = Path.Combine(basePath, "avatars");
+        Directory.CreateDirectory(avatarFolder);
+
+        // Генерируем имя
+        var ext = Path.GetExtension(photo.FileName);
+        var fileName = $"{Guid.NewGuid()}{ext}";
+        var filePath = Path.Combine(avatarFolder, fileName);
+
+        using (var stream = System.IO.File.Create(filePath))
+        {
+            await photo.CopyToAsync(stream);
+        }
+
+        // Сохраняем только относительный путь
+        user.AvatarPath = $"avatars/{fileName}";
+        await _db.SaveChangesAsync();
+
+        return Ok(new { photo = user.AvatarPath });
+    }
 }
 
-public record UpdateProfileRequest(string DisplayName, string Email, string? TelegramUsername);
+public record UpdateProfileRequest(string DisplayName, string Email, string? TelegramUsername, string AvatarPath);
 public record TelegramLinkRequest(string Username, long ChatId);

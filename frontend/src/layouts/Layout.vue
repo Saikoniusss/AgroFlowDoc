@@ -8,9 +8,9 @@ import http from '../api/http';
 
 const router = useRouter();
 const auth = useAuthStore();
+console.log(auth)
 const sidebarVisible = ref(true);
 const isMobile = computed(() => window.innerWidth <= 767);
-
 // 👇 управление меню профиля
 const menuProfile  = ref();
 const menuItems = ref([
@@ -121,7 +121,8 @@ onMounted(async () => {
             <template #end>
                 <div class="flex items-center gap-2 cursor-pointer" @click="toggleMenu">
                     <Avatar 
-                        image="https://primefaces.org/cdn/primevue/images/avatar/amyelsner.png" 
+                        :image="auth.user?.avatarPath ? http.defaults.baseURL.replace('/api', '') + '/' + auth.user?.avatarPath 
+                        : 'https://primefaces.org/cdn/primevue/images/avatar/amyelsner.png'"
                         shape="circle"
                         size="large"
                         class="border-2 border-blue-500"
