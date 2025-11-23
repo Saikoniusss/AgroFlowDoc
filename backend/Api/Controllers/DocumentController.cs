@@ -8,6 +8,7 @@ using Application.Worfkflow.DocumentDTO;
 using System.Text.Json;
 using Application.Worfkflow;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Infrastructure.Services;
 
 namespace Api.Controllers;
 
@@ -20,12 +21,15 @@ public class DocumentController : ControllerBase
     private readonly IWorkflowService _workflowService;
     private readonly ILogger<DocumentController> _logger;
     private readonly IConfiguration _config;
-    public DocumentController(DocflowDbContext db, IWorkflowService workflowService, ILogger<DocumentController> logger, IConfiguration configuration) 
+    private readonly ITelegramNotifier _telegram;
+    public DocumentController(DocflowDbContext db, IWorkflowService workflowService, 
+            ILogger<DocumentController> logger, IConfiguration configuration, ITelegramNotifier telegram) 
     {
         _db = db; 
         _workflowService = workflowService;
         _logger = logger;
         _config = configuration;
+        _telegram = telegram;
     }
 
      // 1. Список процессов (для списка "Создать документ")
@@ -162,6 +166,36 @@ public class DocumentController : ControllerBase
                 if (step.StepOrder == 1)
                     doc.CurrentStepId = tracker.Id;
             }
+           
+            //Отправка уведомления в Telegram
+            var firstStepTracker = await _db.WFTrackers
+            .FirstOrDefaultAsync(t => t.DocumentId == doc.Id && t.StepOrder == 1);
+            if (firstStepTracker != null)
+            {
+                var approvers = ParseApprovers(firstStepTracker.ApproversJson); // твоя функция парсинга JSON
+                _logger.LogWarning("TELEGRAM: вызываю SendMessage для chatId={ChatId}", doc.CreatedBy.TelegramChatId);
+                foreach (var a in approvers)
+                {
+                    if (a.Type == "role")
+                    {
+                        await _telegram.SendToRole(
+                            a.Value,
+                            $"У вас новый документ на согласовании:\n<b>{doc.Title}</b>\n№{doc.SystemNumber}"
+                        );
+                    }
+                    else if (a.Type == "user")
+                    {
+                        await _telegram.SendToUsers(
+                            new[] { Guid.Parse(a.Value) },
+                            $"У вас новый документ на согласовании:\n<b>{doc.Title}</b>\n№{doc.SystemNumber}"
+                        );
+                    }
+                }
+
+            }
+
+
+
         }
         await _db.SaveChangesAsync();
 
@@ -545,6 +579,7 @@ public class DocumentController : ControllerBase
         List<string> approvers;
         var doc = await _db.Documents
             .Include(d => d.Process)
+            .Include(d => d.CreatedBy)
             .Include(d => d.WorkflowTrackers.OrderBy(t => t.StepOrder))
             .FirstOrDefaultAsync(d => d.Id == id);
 
@@ -618,6 +653,13 @@ public class DocumentController : ControllerBase
                 // 🎉 Финальный шаг → документ утверждён
                 doc.Status = "Утверждён";
                 doc.CurrentStepId = null;
+                if (doc.CreatedBy?.TelegramChatId is not null)
+                {
+                    await _telegram.SendMessage(
+                        doc.CreatedBy.TelegramChatId.Value,
+                        $"Ваш документ №{doc.SystemNumber} был <b>утверждён</b> 🎉"
+                    );
+                }
             }
             else
             {
@@ -625,6 +667,28 @@ public class DocumentController : ControllerBase
                 doc.CurrentStepId = nextStep.Id;
                 nextStep.Status = "Pending";
                 nextStep.StartedAtUtc = DateTime.UtcNow;
+
+                // Разбор списка подписантов
+                var nextApprovers = ParseApprovers(nextStep.ApproversJson);
+                _logger.LogWarning("TELEGRAM: вызываю SendMessage для chatId={ChatId}", doc.CreatedBy.TelegramChatId);
+                foreach (var a in nextApprovers)
+                {
+                    if (a.Type == "role")
+                    {
+                        await _telegram.SendToRole(
+                            a.Value,
+                            $"У вас новый документ на согласовании:\n<b>{doc.Title}</b>\n№{doc.SystemNumber}"
+                        );
+                    }
+                    else if (a.Type == "user")
+                    {
+                        await _telegram.SendToUsers(
+                            new[] { Guid.Parse(a.Value) },
+                            $"У вас новый документ на согласовании:\n<b>{doc.Title}</b>\n№{doc.SystemNumber}"
+                        );
+                    }
+                }
+
             }
         }
 
@@ -643,6 +707,7 @@ public class DocumentController : ControllerBase
     {
         var doc = await _db.Documents
             .Include(d => d.Process)
+            .Include(d => d.CreatedBy)
             .Include(d => d.WorkflowTrackers.OrderBy(t => t.StepOrder))
             .FirstOrDefaultAsync(d => d.Id == id);
 
@@ -660,6 +725,12 @@ public class DocumentController : ControllerBase
         current.RejectedByJson = $"[\"user:{userId}\"]";
         current.CompletedAtUtc = DateTime.UtcNow;
         current.ApproverComment = req.Comment;
+        if(doc.CreatedBy?.TelegramChatId is not null)
+        {
+            await _telegram.SendMessage(
+                doc.CreatedBy.TelegramChatId.Value,
+                $"Ваш документ №{doc.SystemNumber} был <b>отклонён</b> ❌\nПричина: {current.ApproverComment}");
+        }
 
         // --- Сам документ тоже закрывается ---
         doc.Status = "Rejected";
@@ -668,6 +739,18 @@ public class DocumentController : ControllerBase
         await _db.SaveChangesAsync();
 
         return Ok(new { message = "Документ отклонён" });
+    }
+    public record ApproverItem(string Type, string Value);
+
+    public List<ApproverItem> ParseApprovers(string? json)
+    {
+        var list = JsonSerializer.Deserialize<List<string>>(json ?? "[]") ?? new();
+
+        return list.Select(x =>
+        {
+            var parts = x.Split(':', 2);
+            return new ApproverItem(parts[0], parts[1]);
+        }).ToList();
     }
 }
 

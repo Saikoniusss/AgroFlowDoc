@@ -12,43 +12,20 @@ namespace Infrastructure.Services;
 
 public class TelegramBotService : BackgroundService
 {
-    private static bool _started = false; // <--- защита от двойного запуска
     private readonly ILogger<TelegramBotService> _logger;
     private readonly IConfiguration _config;
     private readonly IServiceScopeFactory _scopeFactory;
     private TelegramBotClient? _bot;
-    private readonly object _lock = new();
 
-    public TelegramBotService(ILogger<TelegramBotService> logger, IConfiguration config, IServiceScopeFactory scopeFactory)
+    public TelegramBotService(ILogger<TelegramBotService> logger, IConfiguration config, 
+            IServiceScopeFactory scopeFactory)
     {
         _logger = logger;
         _config = config;
         _scopeFactory = scopeFactory;
     }
-    public override Task StartAsync(CancellationToken cancellationToken)
-    {
-        if (_started)
-        {
-            _logger.LogWarning("❗ TelegramBotService duplicate StartAsync blocked.");
-            return Task.CompletedTask;
-        }
-
-        _started = true;
-        return base.StartAsync(cancellationToken);
-    }
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-            lock (_lock)
-            {
-                if (_started)
-                {
-                    _logger.LogWarning("TelegramBotService already started — skipping duplicate run.");
-                    return;
-                }
-                _started = true;
-            }
-
-
         var token = _config["Telegram:BotToken"];
         if (string.IsNullOrEmpty(token))
         {
@@ -58,15 +35,16 @@ public class TelegramBotService : BackgroundService
 
         _bot = new TelegramBotClient(token);
 
-        await _bot.DeleteWebhookAsync(true, stoppingToken); 
-        _logger.LogInformation("Webhook cleared, starting polling...");// ⚡ очистка старых апдейтов 
+
+        await _bot.DeleteWebhookAsync(true, stoppingToken);
         var me = await _bot.GetMeAsync(stoppingToken);
         _logger.LogInformation("🤖 Telegram bot {Name} started.", me.Username);
 
         var options = new Telegram.Bot.Polling.ReceiverOptions
         {
-            AllowedUpdates = Array.Empty<UpdateType>() // Получаем все апдейты
+            AllowedUpdates = Array.Empty<UpdateType>()
         };
+
         _bot.StartReceiving(HandleUpdateAsync, HandleErrorAsync, options, stoppingToken);
     }
 
@@ -116,21 +94,5 @@ public class TelegramBotService : BackgroundService
     {
         _logger.LogError(ex, "Telegram bot error");
         return Task.CompletedTask;
-    }
-
-    // Вызов уведомлений из других мест
-    public async Task NotifyUserAsync(Guid userId, string message)
-    {
-        if (_bot is null)
-            return;
-
-        using var scope = _scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<DocflowDbContext>();
-
-        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId);
-        if (user?.TelegramChatId is null)
-            return;
-
-        await _bot.SendTextMessageAsync(user.TelegramChatId, message);
     }
 }

@@ -211,7 +211,7 @@ const fileUrl = (f) =>
   http.get(`/v1/documents/files/${f.id}/download`);
 
 const approve = async () => {
-  await documentApi.approve(route.params.id)
+  await http.post(`/v1/documents/${route.params.id}/approve`)
   router.push('/todo')
 }
 

@@ -69,14 +69,19 @@ builder.Services.AddDbContext<DocflowDbContext>(opt =>
     opt.UseSqlServer(connectionString));
 
 // Регистрируем TelegramBotService как HostedService (singleton)
-if (!isEfTool)
-{
-    builder.Services.AddSingleton<TelegramBotService>();
-    builder.Services.AddHostedService(sp => sp.GetRequiredService<TelegramBotService>());
-}
+
+
 
 //Services
 builder.Services.AddScoped<IWorkflowService, WorkflowService>();
+
+builder.Services.AddHostedService<TelegramBotService>();
+
+builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
+builder.Services.AddSingleton<TelegramNotificationWorker>();      // Worker как singleton
+builder.Services.AddHostedService(sp => sp.GetRequiredService<TelegramNotificationWorker>());
+builder.Services.AddTransient<ITelegramNotifier, TelegramNotifier>();
+
 
 // ----- App -----
 var app = builder.Build();
