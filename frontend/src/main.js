@@ -25,7 +25,11 @@ const app = createApp(App)
             preset: Aura
         }
     })
-    app.use(ToastService) // <-- регистрация ToastService
+    app.use(ToastService, {
+        defaultOptions: {
+            life: 3000
+        }
+    }) // <-- регистрация ToastService
     app.component('InputText', InputText)
     app.component('InputNumber', InputNumber)
     app.component('Calendar', Calendar)

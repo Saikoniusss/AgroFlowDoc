@@ -35,7 +35,7 @@
       </div>
       <div class="flex flex-col gap-3 mb-3">
         <label for="routes" style="min-width: 160px">Маршрут согласования</label>
-        <Dropdown v-model="newProcess.workflowRouteId" :options="routes" optionLabel="name" optionValue="id" placeholder="Выберите шаблон" fluid/>
+        <Dropdown v-model="newProcess.workflowRouteId" :options="routes" optionLabel="name" optionValue="id" placeholder="Выберите маршрут" fluid/>
       </div>
       <Button @click="createProcess" size="small" severity="success" variant="text">Создать</Button>
       <Button @click="showCreateDialog = false" size="small" severity="secondary" variant="text">Отмена</Button>

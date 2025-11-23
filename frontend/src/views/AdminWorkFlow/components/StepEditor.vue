@@ -13,8 +13,8 @@
       <InputNumber v-model="stepLocal.minApprovals" :min="1" aria-describedby="minApprovals-help" fluid/>
     </div>
     <div class="p-field-checkbox">
-      <Checkbox v-model="stepLocal.isParallel" binary />
-      <label class="ml-2">Параллельное согласование</label>
+      <Checkbox v-model="stepLocal.isParallel" binary aria-describedby="isParallel-help" />
+      <label class="ml-2" for="isParallel">Параллельное согласование</label>
     </div>
 
     <Divider />
