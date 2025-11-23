@@ -107,7 +107,9 @@ app.UseStaticFiles(new StaticFileOptions
     RequestPath = "/uploads"
 });
 
-var avatarPath = @"D:\DocumentUploads\avatars";
+var avatarPath = builder.Configuration.GetValue<string>("FileStorage:AvatarPath")
+                 ?? Path.Combine(Directory.GetCurrentDirectory(), "FileStorage");
+
 
 if (!Directory.Exists(avatarPath))
     Directory.CreateDirectory(avatarPath);
