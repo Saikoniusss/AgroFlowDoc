@@ -42,11 +42,12 @@ export const useAuthStore = defineStore('auth', {
       try {
         const res = await http.get('/auth/me');
         this.user = res.data;
+        localStorage.setItem('user', JSON.stringify(this.user));
       } catch {
         this.user = null;
       }
     },
-       async fetchMe() {
+    async fetchMe() {
       if (!this.token) return
       axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`
       try {

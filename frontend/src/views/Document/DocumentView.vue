@@ -130,12 +130,10 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import documentApi from '@/api/documentApi'
 
 import Card from 'primevue/card'
 import Tag from 'primevue/tag'
 import Button from 'primevue/button'
-import Timeline from 'primevue/timeline'
 import http from '../../api/http'
 import { DateTime } from 'luxon';
 import DataTable from 'primevue/datatable'
@@ -218,7 +216,7 @@ const approve = async () => {
 const reject = async () => {
   const comment = prompt("Причина отклонения:")
   if (!comment) return
-  await documentApi.reject(route.params.id, comment)
+  await http.post(`/${route.params.id}/reject`, { comment })
   router.push('/todo')
 }
 </script>
