@@ -110,7 +110,11 @@ app.UseStaticFiles(new StaticFileOptions
 var avatarPath = builder.Configuration.GetValue<string>("FileStorage:AvatarPath")
                  ?? Path.Combine(Directory.GetCurrentDirectory(), "FileStorage");
 
-
+// Если путь относительный → делаем абсолютным
+if (!Path.IsPathRooted(avatarPath))
+{
+    avatarPath = Path.Combine(Directory.GetCurrentDirectory(), avatarPath);
+}
 if (!Directory.Exists(avatarPath))
     Directory.CreateDirectory(avatarPath);
 
