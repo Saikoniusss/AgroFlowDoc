@@ -116,7 +116,7 @@ onMounted(async () => {
                 },
         ]">
             <template #start>
-                <span @click="router.push('/documents')" class="layout-logo text-xl font-bold ml-2 mr-2 cursor-pointer">AgroFlow</span>
+                <span @click="router.push('/documents')" class="layout-logo text-xl font-bold ml-2 mr-2 cursor-pointer">DocumentFlow</span>
             </template>
             <template #end>
                 <div class="flex items-center gap-2 cursor-pointer" @click="toggleMenu">

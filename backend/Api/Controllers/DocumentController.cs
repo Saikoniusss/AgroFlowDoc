@@ -166,38 +166,45 @@ public class DocumentController : ControllerBase
                 if (step.StepOrder == 1)
                     doc.CurrentStepId = tracker.Id;
             }
+
+            // Сохраняем все шаги в базу
+            await _db.SaveChangesAsync();
            
             //Отправка уведомления в Telegram
             var firstStepTracker = await _db.WFTrackers
-            .FirstOrDefaultAsync(t => t.DocumentId == doc.Id && t.StepOrder == 1);
-            if (firstStepTracker != null)
+                .FirstOrDefaultAsync(t => t.DocumentId == doc.Id && t.StepOrder == 1);
+
+            if (firstStepTracker == null)
             {
-                var approvers = ParseApprovers(firstStepTracker.ApproversJson); // твоя функция парсинга JSON
-                _logger.LogWarning("TELEGRAM: вызываю SendMessage для chatId={ChatId}", doc.CreatedBy.TelegramChatId);
+                Console.WriteLine($"[Warning] Первый шаг для документа {doc.Id} не найден!");
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(firstStepTracker.ApproversJson))
+                {
+                    Console.WriteLine($"[Warning] ApproversJson пуст для первого шага документа {doc.Id}");
+                }
+                
+                var approvers = ParseApprovers(firstStepTracker.ApproversJson ?? "[]");
+
+                if (approvers.Count == 0)
+                    Console.WriteLine($"[Warning] Нет подписантов в ApproversJson для первого шага документа {doc.Id}");
+
                 foreach (var a in approvers)
                 {
+                    if (string.IsNullOrWhiteSpace(a.Value))
+                    {
+                        Console.WriteLine($"[Warning] Найден подписант с пустым значением Type='{a.Type}' в первом шаге документа {doc.Id}");
+                        continue;
+                    }
+
                     if (a.Type == "role")
-                    {
-                        await _telegram.SendToRole(
-                            a.Value,
-                            $"У вас новый документ на согласовании:\n<b>{doc.Title}</b>\n№{doc.SystemNumber}"
-                        );
-                    }
+                        await _telegram.SendToRole(a.Value, $"У вас новый документ на согласовании:\n<b>{doc.Title}</b>\n№{doc.SystemNumber}");
                     else if (a.Type == "user")
-                    {
-                        await _telegram.SendToUsers(
-                            new[] { Guid.Parse(a.Value) },
-                            $"У вас новый документ на согласовании:\n<b>{doc.Title}</b>\n№{doc.SystemNumber}"
-                        );
-                    }
+                        await _telegram.SendToUsers(new[] { Guid.Parse(a.Value) }, $"У вас новый документ на согласовании:\n<b>{doc.Title}</b>\n№{doc.SystemNumber}");
                 }
-
             }
-
-
-
         }
-        await _db.SaveChangesAsync();
 
 
         return Ok(new
@@ -670,7 +677,6 @@ public class DocumentController : ControllerBase
 
                 // Разбор списка подписантов
                 var nextApprovers = ParseApprovers(nextStep.ApproversJson);
-                _logger.LogWarning("TELEGRAM: вызываю SendMessage для chatId={ChatId}", doc.CreatedBy.TelegramChatId);
                 foreach (var a in nextApprovers)
                 {
                     if (a.Type == "role")
@@ -751,6 +757,116 @@ public class DocumentController : ControllerBase
             var parts = x.Split(':', 2);
             return new ApproverItem(parts[0], parts[1]);
         }).ToList();
+    }
+    [HttpGet("{id:guid}/comments")]
+    public async Task<IActionResult> GetComments(Guid id)
+    {
+        var comments = await _db.DocumentComments
+            .Where(c => c.DocumentId == id)
+            .Include(c => c.User)
+            .OrderByDescending(c => c.CreatedAtUtc)
+            .Select(c => new 
+            {
+                c.Id,
+                c.CommentText,
+                c.CreatedAtUtc,
+                AuthorName = c.User.DisplayName
+            })
+            .ToListAsync();
+
+        return Ok(comments);
+    }
+
+    public class AddCommentRequest
+    {
+        public string Text { get; set; } = default!;
+    }
+    [HttpPost("{id:guid}/comments")]
+    public async Task<IActionResult> AddComment(Guid id, [FromBody] AddCommentRequest req)
+    {
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+        var document = await _db.Documents
+            .Include(d => d.WorkflowTrackers)
+            .FirstOrDefaultAsync(d => d.Id == id);
+
+        if (document == null)
+            return NotFound();
+
+        if (string.IsNullOrWhiteSpace(req.Text))
+            return BadRequest("Комментарий пуст");
+
+        var comment = new DocumentComment
+        {
+            Id = Guid.NewGuid(),
+            DocumentId = id,
+            UserId = userId,
+            CommentText = req.Text,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+
+        _db.DocumentComments.Add(comment);
+        await _db.SaveChangesAsync();
+
+        // 🔥 Уведомления Telegram
+        await NotifyAboutComment(document, comment);
+
+        return Ok();
+    }
+    private async Task NotifyAboutComment(Document document, DocumentComment comment)
+    {
+        var authorId = comment.UserId;
+
+        // 1. Инициатор документа
+        var users = new HashSet<Guid> { document.CreatedById };
+
+        // 2. Все, кто подписывает — берем из ApproversJson каждого шага
+        foreach (var step in document.WorkflowTrackers)
+        {
+            var approvers = ParseApprovers(step.ApproversJson); // твоя функция парсинга JSON
+            foreach (var ap in approvers)
+            {
+                if (ap.Type == "user" && Guid.TryParse(ap.Value, out var uid))
+                {
+                    users.Add(uid);
+                }
+                // Если нужно — можно добавить поддержку ролей
+            }
+        }
+
+        // исключаем автора комментария
+        users.Remove(authorId);
+
+        var author = await _db.Users.FindAsync(authorId);
+
+        foreach (var uid in users)
+        {
+            var u = await _db.Users.FindAsync(uid);
+            if (u == null || u.TelegramChatId == null) continue;
+
+            string msg =
+            $@"💬 Новый комментарий к документу №{document.SystemNumber}
+            Автор: {author?.DisplayName}
+            Комментарий:
+            {comment.CommentText}";
+
+            await _telegram.SendMessage(
+                u.TelegramChatId.Value, msg);
+        }
+    }
+    [HttpDelete("{documentId}/comments/{commentId}")]
+    public async Task<IActionResult> DeleteComment(Guid documentId, Guid commentId)
+    {
+        var comment = await _db.DocumentComments
+            .FirstOrDefaultAsync(c => c.Id == commentId && c.DocumentId == documentId);
+
+        if (comment == null)
+            return NotFound();
+
+        _db.DocumentComments.Remove(comment);
+        await _db.SaveChangesAsync();
+
+        return NoContent();
     }
 }
 

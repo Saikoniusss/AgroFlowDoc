@@ -103,6 +103,47 @@
               </div>
             </template>
           </Card>
+          <Card class="w-full border-0">
+            <template #title>💬 Комментарии</template>
+            <template #content>
+
+              <div v-if="comments.length === 0" class="text-sm text-gray-500">
+                Комментариев пока нет.
+              </div>
+
+              <div v-for="c in comments" :key="c.id" class="p-2 mb-2 border-round surface-100">
+                <div class="flex justify-between items-start">
+                  
+                  <!-- Автор и дата слева -->
+                  <div class="flex flex-col text-xs text-gray-500 w-full">
+                    <div class="flex justify-between items-center">
+                      <span class="font-bold">{{ c.authorName }}</span>
+                      <span class="text-right text-gray-400 text-sm">{{ formatDateTime(c.createdAtUtc) }}</span>
+
+                      <!-- Кнопка удаления для администратора -->
+                      <Button
+                              icon="pi pi-trash"
+                              class="p-button-text p-button-danger p-button-sm ml-2"
+                              @click="deleteComment(c.id)" />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Текст комментария -->
+                <div class="mt-1 text-left">
+                  {{ c.commentText }}
+                </div>
+              </div>
+
+              <div class="mt-3 flex gap-2">
+                <InputText v-model="newComment" class="w-full" placeholder="Введите комментарий..." />
+                <Button label="Отправить" icon="pi pi-send"
+                        :disabled="newComment.trim().length === 0"
+                        @click="postComment" />
+              </div>
+
+            </template>
+          </Card>
         </div>
     </template>
     <template #footer>
@@ -146,6 +187,8 @@ const document = ref(null)
 
 const fields = ref({})
 const steps = ref([])
+const comments = ref([]);
+const newComment = ref("");
 
 const formatDateTime = (utcString) => {
   return DateTime.fromISO(utcString, { zone: 'utc' }) // берём UTC
@@ -198,6 +241,7 @@ onMounted(async () => {
   document.value = data
   fields.value = JSON.parse(data.fieldsJson || "{}")
   steps.value = data.workflow
+  await loadComments();  // 👈 Загрузка комментариев
 })
 
 const getLabel = (key) => {
@@ -216,9 +260,31 @@ const approve = async () => {
 const reject = async () => {
   const comment = prompt("Причина отклонения:")
   if (!comment) return
-  await http.post(`/${route.params.id}/reject`, { comment })
+  await http.post(`v1/documents/${route.params.id}/reject`, { comment })
   router.push('/todo')
 }
+const loadComments = async () => {
+  const { data } = await http.get(`v1/documents/${route.params.id}/comments`);
+  comments.value = data;
+};
+
+const postComment = async () => {
+  await http.post(`v1/documents/${route.params.id}/comments`, {
+    text: newComment.value
+  });
+  newComment.value = "";
+  await loadComments();
+};
+const deleteComment = async (commentId) => {
+  if (!confirm("Вы уверены, что хотите удалить этот комментарий?")) return;
+
+  try {
+    await http.delete(`/v1/documents/${route.params.id}/comments/${commentId}`);
+    await loadComments();
+  } catch (err) {
+    console.error("Ошибка при удалении комментария", err);
+  }
+};
 </script>
 
 <style scoped>
