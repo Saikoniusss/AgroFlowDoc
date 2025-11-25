@@ -164,7 +164,7 @@ const openEditStep = (route, step) => {
 }
 
 const updateStep = async (payload) => {
-  await http.post(`/v1/admin/workflow/routes/${selectedRoute.value.id}/steps`, editingStep.value.id, payload)
+  await http.put(`/v1/admin/workflow/routes/${selectedRoute.value.id}/steps/${editingStep.value.id}`, payload)
   toast.add({ severity: 'success', summary: 'Этап обновлён' })
   showEditStepDialog.value = false
   await loadRoutes()
