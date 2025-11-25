@@ -92,8 +92,10 @@
                   <Column field="fileName" header="Имя файла" />
                   <Column header="Действия">
                     <template #body="{ data }">
-                      <a :href="'/' + data.relativePath" target="_blank"><i class="pi pi-eye m-1 cursor-pointer"></i></a>
-                      <a :href="'/' + data.relativePath" target="_blank"><i class="pi pi-download m-1 cursor-pointer"></i></a>
+                      <a :href="http.defaults.baseURL.replace('/api', '') + '/uploads/' + data.relativePath " target="_blank"><i class="pi pi-eye m-1 cursor-pointer"></i></a>
+                      <a :href="http.get(`/v1/documents/files/${data.id}/download`)" target="_blank">
+                        <i class="pi pi-download m-1 cursor-pointer"></i>
+                      </a>
                     </template>
                   </Column>
                 </DataTable>

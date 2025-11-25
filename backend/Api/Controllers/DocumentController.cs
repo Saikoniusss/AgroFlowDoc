@@ -14,7 +14,7 @@ namespace Api.Controllers;
 
 [ApiController]
 [Route("api/v1/documents")]
-[Authorize]
+//[Authorize]
 public class DocumentController : ControllerBase
 {
     private readonly DocflowDbContext _db;
