@@ -8,7 +8,7 @@
               <h3>№ {{ document?.systemNumber }}</h3>
             </div>
             <div class="w-2 flex justify-content-end align-items-center gap-2">
-            <Tag :value="mappedStatus" :severity="statusColor" />
+            <span :class="'status status-' + statusColor" > {{ document?.status }}</span>
               <span class="font-semibold">
                 {{ document?.displayName }}
               </span>
@@ -93,7 +93,7 @@
                   <Column header="Действия">
                     <template #body="{ data }">
                       <a :href="http.defaults.baseURL.replace('/api', '') + '/uploads/' + data.relativePath " target="_blank"><i class="pi pi-eye m-1 cursor-pointer"></i></a>
-                      <a :href="http.get(`/v1/documents/files/${data.id}/download`)" target="_blank">
+                      <a @click="downloadFile(data.id)">
                         <i class="pi pi-download m-1 cursor-pointer"></i>
                       </a>
                     </template>
@@ -230,6 +230,20 @@ function formatApprover(value) {
 
   return value;
 }
+
+async function downloadFile(id) {
+  const response = await http.get(`/v1/documents/files/${id}/download`, { responseType: 'blob' });
+  const blob = response.data;
+  const url = window.URL.createObjectURL(blob);
+  const link = window.document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', 'file'); // Можно задать имя файла здесь
+  window.document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}
+
 function isDateValue(value) {
   if (typeof value === "number") return false; // число → НЕ дата
   if (typeof value !== "string") return false;

@@ -140,6 +140,11 @@ const router = createRouter({
             ]
         },
         {
+            path: '/server-error',
+            name: 'ServerError',
+            component: () => import('../views/Errors/ServerError.vue'),
+        },
+        {
             path: '/:catchAll(.*)',
             name: 'NotFound',
             component: () => import('../views/Errors/NotFound.vue'),

@@ -147,6 +147,7 @@ onMounted(async () => {
 <style scoped>
 main {
     padding: 0.5em !important;
+    background-color: #e8e5e5 !important;
 }
 .layout-container {
     height: 100vh;
@@ -167,6 +168,16 @@ main {
     background-color: var(--surface-card);
 }
 
+.p-menubar {
+    border-radius: 0;
+    background-color: #edf1fb;
+    color: black;
+}
+
+.p-menubar-start .layout-logo {
+    font-weight: bold;
+    letter-spacing: 2px !important;
+}
 /* Мобильная версия — скрываем сайдбар */
 @media (max-width: 767px) {
     .layout-sidebar.hidden {

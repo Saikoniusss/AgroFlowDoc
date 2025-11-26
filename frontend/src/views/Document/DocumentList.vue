@@ -1,26 +1,40 @@
 <template>
   <Card class="p-1 border-2">
+    <template #header>
+      <h2>📄 Создать новый документ</h2>
+    </template>
     <template #content>
-    <h2>📄 Создать новый документ</h2>
+      <DataView :value="processes" :loading="loading" dataKey="id" paginator :rows="4">
+        <template #list="slotProps">
+          <div class="flex flex-row gap-3">
+            <div class="doc-card w-4" v-for="item in slotProps.items" :key="item.id">
+                <div class="doc-header">
+                    <span class="doc-id">Код:</span>
+                    <span class="status status-info">{{ item.code }}</span>
+                </div>
 
-    <DataTable :value="processes" :loading="loading">
-      <Column field="name" header="Название процесса" />
-      <Column field="templateName" header="Шаблон" />
-      <Column>
-        <template #body="{ data }">
-          <Button label="Создать" icon="pi pi-plus"
-                  @click="openCreate(data.id)" />
+                <div class="doc-name">{{ item.templateName }}</div>
+
+                <div class="doc-info">
+                    <div><strong>Процесс:</strong> {{ item.name }}</div> 
+                </div>
+
+                <div class="doc-actions">
+                  <Button label="Создать" icon="pi pi-plus"
+                    @click="openCreate(item.id)" />
+                </div>
+            </div>
+          </div>
         </template>
-      </Column>
-    </DataTable>
+      </DataView>
+
     </template>
   </Card>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import DataTable from 'primevue/datatable'
-import Column from 'primevue/column'
+import DataView from "primevue/dataview"
 import Button from 'primevue/button'
 import { useRouter, useRoute } from "vue-router"
 import http from '../../api/http'
