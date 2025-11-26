@@ -2,7 +2,7 @@ import axios from 'axios';
 import router from '../routers';
 
 const http = axios.create({
-  baseURL: 'http://localhost:5097/api',
+  baseURL: 'http://localhost:8080/api',
 });
 
 const token = localStorage.getItem('token');
@@ -17,6 +17,9 @@ http.interceptors.response.use(
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       router.push('/login');
+    }
+    if (error.response && error.response.status === 500) {
+      router.push('/server-error');
     }
     return Promise.reject(error);
   }

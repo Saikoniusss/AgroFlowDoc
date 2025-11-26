@@ -6,28 +6,26 @@
     <template #content>
       <DataView :value="documents" layout="list" dataKey="id" paginator :rows="4">
         <template #list="slotProps">
-            <div class="flex flex-column gap-3" style="background-color: #d7cfcf;">
-                <div v-for="item in slotProps.items" :key="item.id" class="p-3 surface-0 border-round grid text-left mr-0 ml-0" style="border: 1px solid black;">
-                    <div class="w-1">
-                        <img src="https://primefaces.org/cdn/primevue/images/avatar/amyelsner.png" alt="Document Image" class="w-6 border-round">
+            <div class="flex flex-column gap-3">
+                <div class="cards-vertical text-left">
+                  <div v-for="item in slotProps.items" :key="item.id" class="doc-card mb-2  ">
+                    <div class="doc-header">
+                        <span class="doc-id">Код: {{ item.systemNumber }}</span>
+                        <span :class="'status status-' + statusColor(item.status)">{{ item.status }}</span>
                     </div>
-                    <div class="w-8 grid">
-                        <div class="text-xl font-bold w-8">{{ item.process.name }}</div>
-                        <div class="font-bold w-4">№ {{ item.systemNumber }} от {{ formatDateTime(item.createdAtUtc) }}</div>
-                        <Divider class="my-1" />
-                        <div class="text-md w-8">Автор</div>
-                        <div class="w-4">{{ item.createdByDisplayName}}</div>
-                        <Divider class="my-1" />
-                        <div class="text-md w-8">Описание</div>
-                        <div class="w-4">{{ item.title }}</div>
-                        <Divider class="my-1" />
-                        <div class="text-md w-8">Статус</div>
-                        <div class="w-4">{{ item.status }}</div>
-                        <Divider class="my-1" />
+
+                    <div class="doc-name">{{ item.title }}</div>
+
+                    <div class="doc-info">
+                        <div><strong>Тип:</strong> {{ item.process.name }}</div>
+                        <div><strong>Дата:</strong> {{ formatDateTime(item.createdAtUtc) }}</div>
+                        <div><strong>Автор:</strong> {{ item.createdByDisplayName }}</div>
                     </div>
-                    <div class="w-3 text-right">
-                      <Button icon="pi pi-angle-right" @click="open(item.id)" />
+
+                    <div class="doc-actions">
+                        <Button @click="open(item.id)"> Просмотр  </Button>
                     </div>
+                </div>
                 </div>
             </div>
         </template>
@@ -84,7 +82,6 @@ const loadDocuments = async () => {
 
   // фильтруем только нужный процесс
   documents.value = response.data.filter(doc => doc.process.id === processId)
-console.log(documents)
   loading.value = false
 }
 
@@ -96,6 +93,15 @@ watch(
   () => route.fullPath,
   () => loadDocuments()
 )
+
+const statusColor = function(status) {
+  switch (status) {
+    case "Утверждён": return "success"
+    case "Отклонён": return "danger"
+    case "Согласование": return "warning"
+    default: return "secondary"
+  }
+}
 
 const open = (id) => {
   router.push(`/documents/view/${id}`)
