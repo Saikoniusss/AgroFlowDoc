@@ -122,7 +122,8 @@ onMounted(async () => {
                 <div class="flex items-center gap-2 cursor-pointer" @click="toggleMenu">
                     <Avatar 
                         :image="auth.user?.avatarPath ? http.defaults.baseURL.replace('/api', '') + '/' + auth.user?.avatarPath 
-                        : 'https://primefaces.org/cdn/primevue/images/avatar/amyelsner.png'"
+                        : null"
+                        :label="auth.user?.avatarPath ?  null : auth.user?.displayName ? auth.user.displayName.charAt(0).toUpperCase() : ''"
                         shape="circle"
                         size="large"
                         class="border-2 border-blue-500"
@@ -160,7 +161,7 @@ main {
 }
 
 .layout-sidebar {
-    width: 350px;
+    width: 300px;
     transition: transform 0.3s ease;
 }
 
