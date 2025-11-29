@@ -93,7 +93,7 @@
                   <Column header="Действия">
                     <template #body="{ data }">
                       <a :href="http.defaults.baseURL.replace('/api', '') + '/uploads/' + data.relativePath " target="_blank"><i class="pi pi-eye m-1 cursor-pointer"></i></a>
-                      <a @click="downloadFile(data.id)">
+                      <a @click="downloadFile(data)">
                         <i class="pi pi-download m-1 cursor-pointer"></i>
                       </a>
                     </template>
@@ -231,13 +231,13 @@ function formatApprover(value) {
   return value;
 }
 
-async function downloadFile(id) {
-  const response = await http.get(`/v1/documents/files/${id}/download`, { responseType: 'blob' });
+async function downloadFile(data) {
+  const response = await http.get(`/v1/documents/files/${data.id}/download`, { responseType: 'blob' });
   const blob = response.data;
   const url = window.URL.createObjectURL(blob);
   const link = window.document.createElement('a');
   link.href = url;
-  link.setAttribute('download', 'file'); // Можно задать имя файла здесь
+  link.setAttribute('download', data.fileName); // Можно задать имя файла здесь
   window.document.body.appendChild(link);
   link.click();
   link.remove();

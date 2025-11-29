@@ -90,27 +90,32 @@ const assignRole = async () => {
         <Column field="username" header="Логин" sortable></Column>
         <Column field="photo" header="Фото">
           <template #body="slotProps">
-            <Avatar :image="slotProps.data.photo" size="medium" shape="circle" :label="slotProps.data.displayName ? slotProps.data.displayName.charAt(0).toUpperCase() : ''"/>
+            <Avatar 
+              :image="http.defaults.baseURL.replace('/api', '') + '/' + slotProps.data.avatarPath"
+              :label="slotProps.data.avatarPath ?  null : slotProps.data.displayName ? slotProps.data.displayName.charAt(0).toUpperCase() : ''"
+              size="medium"
+              shape="circle"
+            />
           </template>
         </Column>
         <Column field="email" header="Email" sortable></Column>
         <Column field="isApproved" header="Подтверждён">
           <template #body="slotProps">
-            <span :class="['status', slotProps.data.isApproved ? 'ok' : 'pending']">
+            <span :class="['status', 'status-' + (slotProps.data.isApproved ? 'success' : 'pending')]">
               {{ slotProps.data.isApproved ? 'Да' : 'Нет' }}
             </span>
           </template>
         </Column>
         <Column field="isActive" header="Активен">
           <template #body="slotProps">
-            <span :class="['status', slotProps.data.isActive ? 'ok' : 'inactive']">
+            <span :class="['status', 'status-' + (slotProps.data.isActive ? 'success' : 'inactive')]">
               {{ slotProps.data.isActive ? 'Да' : 'Нет' }}
             </span>
           </template>
         </Column>
         <Column field="roles" header="Роли">
           <template #body="slotProps">
-            <span v-for="r in slotProps.data.roles" :key="r" class="role-chip">{{ r.name }}</span>
+            <span v-for="r in slotProps.data.userRoles" class="status status-info">{{ roles.find(role => role.id === r.roleId).name }}</span>
           </template>
         </Column>
         <Column header="Действия">
